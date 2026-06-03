@@ -1,6 +1,7 @@
 # requirements_clean.txt - No problematic packages
 streamlit>=1.28.0
 pymupdf>=1.23.0
+plotly>=5.17.0
 Pillow>=10.0.0
 sentence-transformers>=2.2.0
 pinecone-client>=3.0.0
