@@ -1,0 +1,48 @@
+{
+  "text_queries": [
+    {
+      "question": "What is the weight of Accuracy & Faithfulness?",
+      "expected_answer": "25%",
+      "modality": "text",
+      "expected_page": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What are the delivery options?",
+      "expected_answer": "24-hour and 48-hour challenges",
+      "modality": "text",
+      "expected_page": 2,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is the project about?",
+      "expected_answer": "multi-modal RAG system for document intelligence",
+      "modality": "text",
+      "expected_page": 1,
+      "difficulty": "medium"
+    }
+  ],
+  "table_queries": [
+    {
+      "question": "What is the weight for Code Quality?",
+      "expected_answer": "10%",
+      "modality": "table",
+      "expected_page": 2,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is multi-modal coverage weight?",
+      "expected_answer": "20%",
+      "modality": "table",
+      "expected_page": 2,
+      "difficulty": "easy"
+    },
+    {
+      "question": "List all evaluation criteria with weights",
+      "expected_answer": "Accuracy (25%), Multi-modal (20%), System Design (20%), Innovation (15%), Code Quality (10%), Presentation (10%)",
+      "modality": "table",
+      "expected_page": 2,
+      "difficulty": "hard"
+    }
+  ]
+}

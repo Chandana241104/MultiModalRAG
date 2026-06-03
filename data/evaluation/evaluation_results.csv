@@ -1,0 +1,5 @@
+question,modality,difficulty,expected_answer,retrieved_answer,retrieved_count,retrieval_precision,answer_similarity,exact_match,key_numbers_matched,timestamp
+What is the weight of Accuracy & Faithfulness?,text,easy,25%,I could not find the answer in the document. The provided context does not contain information about the weight of Accuracy & Faithfulness.,10,60.0,0.0,False,0.0,2026-06-04T01:08:12.939336
+What are the delivery options?,text,easy,24-hour and 48-hour challenges,I could not find the answer in the document.,10,40.0,0.0,False,0.0,2026-06-04T01:08:15.273262
+What is the weight for Code Quality?,table,easy,10%,I could not find the answer in the document. The provided context does not contain information about the weight for Code Quality.,10,50.0,0.0,False,0.0,2026-06-04T01:08:18.038799
+What is multi-modal coverage weight?,table,easy,20%,"I could not find the answer in the document. The provided text discusses topics such as estimating fiscal multipliers, visitor arrivals and hotel occupancy, and external position assessment using regr...",10,50.0,0.0,False,0.0,2026-06-04T01:08:20.622233

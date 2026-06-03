@@ -1,0 +1,54 @@
+[
+  {
+    "question":"What is the weight of Accuracy & Faithfulness?",
+    "modality":"text",
+    "difficulty":"easy",
+    "expected_answer":"25%",
+    "retrieved_answer":"I could not find the answer in the document. The provided context does not contain information about the weight of Accuracy & Faithfulness.",
+    "retrieved_count":10,
+    "retrieval_precision":60.0,
+    "answer_similarity":0.0,
+    "exact_match":false,
+    "key_numbers_matched":0.0,
+    "timestamp":"2026-06-04T01:08:12.939336"
+  },
+  {
+    "question":"What are the delivery options?",
+    "modality":"text",
+    "difficulty":"easy",
+    "expected_answer":"24-hour and 48-hour challenges",
+    "retrieved_answer":"I could not find the answer in the document.",
+    "retrieved_count":10,
+    "retrieval_precision":40.0,
+    "answer_similarity":0.0,
+    "exact_match":false,
+    "key_numbers_matched":0.0,
+    "timestamp":"2026-06-04T01:08:15.273262"
+  },
+  {
+    "question":"What is the weight for Code Quality?",
+    "modality":"table",
+    "difficulty":"easy",
+    "expected_answer":"10%",
+    "retrieved_answer":"I could not find the answer in the document. The provided context does not contain information about the weight for Code Quality.",
+    "retrieved_count":10,
+    "retrieval_precision":50.0,
+    "answer_similarity":0.0,
+    "exact_match":false,
+    "key_numbers_matched":0.0,
+    "timestamp":"2026-06-04T01:08:18.038799"
+  },
+  {
+    "question":"What is multi-modal coverage weight?",
+    "modality":"table",
+    "difficulty":"easy",
+    "expected_answer":"20%",
+    "retrieved_answer":"I could not find the answer in the document. The provided text discusses topics such as estimating fiscal multipliers, visitor arrivals and hotel occupancy, and external position assessment using regr...",
+    "retrieved_count":10,
+    "retrieval_precision":50.0,
+    "answer_similarity":0.0,
+    "exact_match":false,
+    "key_numbers_matched":0.0,
+    "timestamp":"2026-06-04T01:08:20.622233"
+  }
+]
