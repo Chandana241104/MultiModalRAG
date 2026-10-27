@@ -1,113 +1,166 @@
-# vector_store.py - Updated for Serverless
+"""Pinecone vector-store adapter with a local mock fallback."""
+
+from __future__ import annotations
+
 import os
 import time
+
 from dotenv import load_dotenv
-from pinecone import Pinecone, ServerlessSpec
+
+try:
+    from pinecone import Pinecone, ServerlessSpec
+except Exception:
+    Pinecone = None
+    ServerlessSpec = None
+
 
 load_dotenv()
 
-api_key = os.getenv("PINECONE_API_KEY")
-index_name = os.getenv("PINECONE_INDEX_NAME")
 
-if not api_key or not index_name:
-    raise ValueError("Missing Pinecone API Key or Index Name in .env")
+class MockMatch:
+    def __init__(self, i: int, metadata: dict | None = None, score: float | None = None, item_id: str | None = None):
+        self.id = item_id or f"mock-{i}"
+        self.score = 0.9 - (i * 0.08) if score is None else score
+        self.metadata = metadata or {
+            "text": f"Mock document chunk {i + 1} for testing without Pinecone.",
+            "page": (i % 3) + 1,
+            "type": "text",
+        }
 
-pc = Pinecone(api_key=api_key)
 
-# Try to list indexes
-try:
-    indexes = pc.list_indexes()
-    existing_indexes = [idx.name for idx in indexes]
-    print(f"Found {len(existing_indexes)} existing indexes")
-except Exception as e:
-    print(f"Error listing indexes: {e}")
-    existing_indexes = []
+class MockResult:
+    def __init__(self, matches):
+        self.matches = matches
 
-if index_name not in existing_indexes:
-    print(f"Creating serverless index: {index_name}...")
-    try:
-        # Use a different region that might have quota
-        pc.create_index(
-            name=index_name,
-            dimension=384,
-            metric="cosine",
-            spec=ServerlessSpec(
-                cloud="aws", 
-                region="us-west-2"  # Try different region
-            )
-        )
-        print(f"✅ Index {index_name} created in us-west-2")
-        time.sleep(30)  # Serverless indexes take longer
-    except Exception as e:
-        print(f"❌ Failed to create index in us-west-2: {e}")
-        
-        # Try another region
+
+class MockIndex:
+    def __init__(self):
+        self.vectors = []
+        self._load_mock_data()
+
+    def _load_mock_data(self):
+        """Load mock data from local storage if available"""
         try:
-            print("Trying eu-west-1 region...")
+            import json
+            from pathlib import Path
+            
+            storage_dir = Path("data/local_store")
+            if storage_dir.exists():
+                with open(storage_dir / "documents.json", "r", encoding="utf-8") as f:
+                    documents = json.load(f)
+                
+                # Load embeddings
+                import numpy as np
+                embeddings = np.load(storage_dir / "embeddings.npy")
+                
+                for i, (doc, emb) in enumerate(zip(documents, embeddings)):
+                    if hasattr(emb, "tolist"):
+                        emb = emb.tolist()
+                    self.vectors.append({
+                        "id": f"doc_{i}",
+                        "values": emb,
+                        "metadata": doc
+                    })
+                print(f"Loaded {len(self.vectors)} vectors from local storage")
+        except Exception as e:
+            print(f"Could not load mock data: {e}")
+
+    def upsert(self, vectors):
+        self.vectors.extend(vectors or [])
+        return {"upserted_count": len(vectors or [])}
+
+    def query(self, vector, top_k=20, include_metadata=True):
+        if self.vectors:
+            matches = []
+            for i, item in enumerate(self.vectors):
+                if isinstance(item, dict):
+                    metadata = item.get("metadata", {})
+                    item_id = item.get("id", f"mock-{i}")
+                    # Calculate similarity if vector is provided
+                    if vector and "values" in item:
+                        try:
+                            import numpy as np
+                            vec1 = np.array(vector)
+                            vec2 = np.array(item["values"])
+                            norm1 = np.linalg.norm(vec1)
+                            norm2 = np.linalg.norm(vec2)
+                            if norm1 > 0 and norm2 > 0:
+                                score = float(np.dot(vec1, vec2) / (norm1 * norm2))
+                            else:
+                                score = 0.5 - (i * 0.03)
+                        except:
+                            score = 0.5 - (i * 0.03)
+                    else:
+                        score = 0.5 - (i * 0.03)
+                    
+                    match = MockMatch(i, metadata=metadata, score=score, item_id=item_id)
+                    matches.append(match)
+            
+            # Sort by score and return top_k
+            matches.sort(key=lambda x: x.score, reverse=True)
+            return MockResult(matches[:top_k])
+
+        # Fallback mock data
+        return MockResult([MockMatch(i) for i in range(min(top_k, 5))])
+
+
+def _create_index():
+    api_key = os.getenv("PINECONE_API_KEY")
+    index_name = os.getenv("PINECONE_INDEX_NAME")
+
+    if not api_key or not index_name:
+        print("Pinecone is not configured. Using mock vector index.")
+        return MockIndex()
+
+    if Pinecone is None or ServerlessSpec is None:
+        print("pinecone package is not installed. Using mock vector index.")
+        return MockIndex()
+
+    try:
+        pc = Pinecone(api_key=api_key)
+        indexes = pc.list_indexes()
+        existing_indexes = [idx.name for idx in indexes]
+        print(f"Found {len(existing_indexes)} existing Pinecone indexes.")
+
+        if index_name not in existing_indexes:
+            print(f"Creating serverless index: {index_name}...")
             pc.create_index(
                 name=index_name,
                 dimension=384,
                 metric="cosine",
-                spec=ServerlessSpec(
-                    cloud="aws", 
-                    region="eu-west-1"  # Another region
-                )
+                spec=ServerlessSpec(cloud="aws", region="us-east-1"),
             )
-            print(f"✅ Index {index_name} created in eu-west-1")
             time.sleep(30)
-        except Exception as e2:
-            print(f"❌ Failed to create index in any region: {e2}")
-            print("⚠️  You may need to:")
-            print("   1. Wait for quota reset (free tier daily limits)")
-            print("   2. Delete unused indexes at app.pinecone.io")
-            print("   3. Upgrade to paid plan")
-            print("   4. Use mock mode for testing")
-            
-            # Fall back to mock index
-            class MockIndex:
-                def query(self, vector, top_k=20, include_metadata=True):
-                    class Match:
-                        def __init__(self, i):
-                            import random
-                            self.score = 0.9 - (i * 0.1)
-                            self.metadata = {
-                                "text": f"Mock document chunk {i+1} for testing without Pinecone.",
-                                "page": random.randint(1, 3),
-                                "type": "text"
-                            }
-                    
-                    class Result:
-                        def __init__(self):
-                            self.matches = [Match(i) for i in range(min(top_k, 5))]
-                    
-                    return Result()
-            
-            index = MockIndex()
-            print("⚠️  Using mock index for testing")
-else:
-    print(f"✅ Index {index_name} already exists")
-    index = pc.Index(index_name)
+
+        print(f"Using Pinecone index: {index_name}")
+        return pc.Index(index_name)
+    except Exception as exc:
+        print(f"Pinecone unavailable: {exc}")
+        print("Using mock vector index.")
+        return MockIndex()
+
+
+index = _create_index()
+
 
 def query_vector(query_embedding, top_k=20):
-    # Handle mock index
-    if hasattr(index, '__class__') and index.__class__.__name__ == 'MockIndex':
-        return index.query(vector=query_embedding, top_k=top_k).matches
-    
-    # Real Pinecone index
+    """Query the vector store and return matches list."""
     if hasattr(query_embedding, "tolist"):
         query_embedding = query_embedding.tolist()
-    
-    if isinstance(query_embedding, list) and query_embedding:
-        if isinstance(query_embedding[0], list):
-            query_embedding = query_embedding[0]
-    
+
+    if isinstance(query_embedding, list) and query_embedding and isinstance(query_embedding[0], list):
+        query_embedding = query_embedding[0]
+
     try:
         response = index.query(
             vector=query_embedding,
             top_k=top_k,
-            include_metadata=True
+            include_metadata=True,
         )
-        return response.matches
-    except Exception as e:
-        print(f"Query error: {e}")
+        matches = getattr(response, "matches", [])
+        if matches is None:
+            return []
+        return matches
+    except Exception as exc:
+        print(f"Query error: {exc}")
         return []

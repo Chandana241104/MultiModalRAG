@@ -5,8 +5,6 @@ import ast
 import hashlib
 from typing import List, Dict
 import numpy as np
-from sentence_transformers import util
-import torch
 
 class EnhancedRetriever:
     def __init__(self):
@@ -24,7 +22,6 @@ class EnhancedRetriever:
                 parsed = ast.literal_eval(text)
                 return parsed.get("text", text)
             except:
-                # If parsing fails, fall back to string manipulation
                 pass
 
         # 2. Fallback: Strip brackets and common keys
@@ -37,7 +34,6 @@ class EnhancedRetriever:
         """Expand query for better retrieval"""
         expansions = [query]
         
-        # Add variations for common question types
         query_lower = query.lower()
         
         if "what" in query_lower:
@@ -52,7 +48,6 @@ class EnhancedRetriever:
             expansions.append(query + " reason")
             expansions.append(query + " cause")
         
-        # Add document-specific expansions
         if "weight" in query_lower or "score" in query_lower:
             expansions.append(query + " percentage")
             expansions.append(query + " criteria")
@@ -65,7 +60,6 @@ class EnhancedRetriever:
         unique_results = []
         
         for result in results:
-            # Create content hash
             content = result.metadata.get('text', '') + str(result.metadata.get('page', ''))
             content_hash = hashlib.md5(content.encode()).hexdigest()
             
@@ -76,9 +70,35 @@ class EnhancedRetriever:
                     'page': result.metadata.get('page', 0),
                     'type': result.metadata.get('type', 'text'),
                     'score': result.score,
-                    'id': result.id,
-                    'original_text': result.metadata.get('text', '')  # Keep original for citations
+                    'id': getattr(result, 'id', ''),
+                    'original_text': result.metadata.get('text', '')
                 })
+        
+        return unique_results
+    
+    def deduplicate_results_for_matches(self, results: List[Dict]) -> List[Dict]:
+        """Deduplicate results with similarity threshold"""
+        if len(results) <= 1:
+            return results
+        
+        unique_results = []
+        seen_texts = set()
+        
+        for result in results:
+            text = result.get('text', '').lower().strip()
+            if len(text) < 20:
+                unique_results.append(result)
+                continue
+            
+            is_duplicate = False
+            for seen_text in seen_texts:
+                if self.text_similarity(text, seen_text) > 0.8:
+                    is_duplicate = True
+                    break
+            
+            if not is_duplicate:
+                seen_texts.add(text)
+                unique_results.append(result)
         
         return unique_results
     
@@ -91,7 +111,6 @@ class EnhancedRetriever:
                      top_k: int = 10) -> List[Dict]:
         """Rerank results using hybrid scores"""
         
-        # Get query embedding for text similarity
         query_embedding = embed_text(query)
         if hasattr(query_embedding, "tolist"):
             query_embedding = query_embedding.tolist()
@@ -99,26 +118,20 @@ class EnhancedRetriever:
             if isinstance(query_embedding[0], list):
                 query_embedding = query_embedding[0]
         
-        # Calculate scores
         reranked = []
         
         for result in text_results:
-            # Get result embedding (re-embed for consistency)
             result_text = result.get('text', '')
-            if len(result_text) > 10:  # Only embed meaningful text
+            if len(result_text) > 10:
                 try:
-                    # Simple text similarity using embeddings if available
                     result_embed = embed_text(result_text)
                     if hasattr(result_embed, "tolist"):
                         result_embed = result_embed.tolist()
                     
-                    # Calculate similarity
                     if isinstance(query_embedding, list) and isinstance(result_embed, list):
-                        # Convert to numpy arrays for similarity calculation
                         query_arr = np.array(query_embedding)
                         result_arr = np.array(result_embed)
                         
-                        # Calculate cosine similarity
                         norm_query = np.linalg.norm(query_arr)
                         norm_result = np.linalg.norm(result_arr)
                         
@@ -127,9 +140,8 @@ class EnhancedRetriever:
                         else:
                             text_sim = 0
                     else:
-                        text_sim = result.get('score', 0)  # Fallback to original score
+                        text_sim = result.get('score', 0)
                     
-                    # Combine with original score
                     original_score = result.get('score', 0)
                     combined_score = (text_sim * text_weight) + (original_score * (1 - text_weight))
                     
@@ -138,14 +150,25 @@ class EnhancedRetriever:
                     reranked.append(result)
                     
                 except Exception as e:
-                    # Fallback to original scoring
                     result['combined_score'] = result.get('score', 0)
                     reranked.append(result)
         
-        # Sort by combined score
         reranked.sort(key=lambda x: x.get('combined_score', 0), reverse=True)
         
         return reranked[:top_k]
+    
+    def text_similarity(self, text1: str, text2: str) -> float:
+        """Calculate simple text similarity"""
+        words1 = set(text1.split())
+        words2 = set(text2.split())
+        
+        if not words1 or not words2:
+            return 0.0
+        
+        intersection = len(words1.intersection(words2))
+        union = len(words1.union(words2))
+        
+        return intersection / union if union > 0 else 0.0
     
     def retrieve_answer_chunks(self, query: str, top_k: int = 20, 
                               rerank: bool = True, deduplicate: bool = True) -> List[str]:
@@ -157,10 +180,9 @@ class EnhancedRetriever:
         expanded_queries = self.query_expansion(query)
         
         all_matches = []
-        for exp_query in expanded_queries[:2]:  # Limit to 2 expansions for performance
+        for exp_query in expanded_queries[:2]:
             query_embedding = embed_text(exp_query)
             
-            # Flatten embedding
             if hasattr(query_embedding, "tolist"):
                 query_embedding = query_embedding.tolist()
             if isinstance(query_embedding, list) and len(query_embedding) > 0:
@@ -171,7 +193,7 @@ class EnhancedRetriever:
                 matches = query_vector(query_embedding, top_k=min(top_k * 2, 50))
                 all_matches.extend(matches)
             except Exception as e:
-                print(f"Error querying Pinecone for '{exp_query}': {e}")
+                print(f"Error querying vector store for '{exp_query}': {e}")
         
         if not all_matches:
             return []
@@ -179,12 +201,11 @@ class EnhancedRetriever:
         # Process and deduplicate results
         processed_results = []
         for match in all_matches:
-            if match and match.metadata:
+            if match and hasattr(match, 'metadata'):
                 raw_text = match.metadata.get("text", "")
                 page = match.metadata.get("page", "Unknown")
                 source_type = match.metadata.get("type", "text")
                 
-                # Apply cleaning
                 final_text = self.clean_text(raw_text)
                 
                 if len(final_text) > 10:
@@ -192,8 +213,8 @@ class EnhancedRetriever:
                         'text': final_text,
                         'page': page,
                         'type': source_type,
-                        'score': match.score,
-                        'id': match.id,
+                        'score': getattr(match, 'score', 0.5),
+                        'id': getattr(match, 'id', ''),
                         'original_text': raw_text
                     })
         
@@ -210,7 +231,6 @@ class EnhancedRetriever:
                 query, processed_results, top_k=top_k
             )
         else:
-            # Sort by original score
             processed_results.sort(key=lambda x: x.get('score', 0), reverse=True)
             processed_results = processed_results[:top_k]
         
@@ -222,48 +242,6 @@ class EnhancedRetriever:
                 chunks.append(f"[Page {result.get('page', '?')} | {result.get('type', 'text')}] {text}")
         
         return chunks
-    
-    def deduplicate_results_for_matches(self, results: List[Dict]) -> List[Dict]:
-        """Deduplicate results with similarity threshold"""
-        if len(results) <= 1:
-            return results
-        
-        unique_results = []
-        seen_texts = set()
-        
-        for result in results:
-            text = result.get('text', '').lower().strip()
-            if len(text) < 20:  # Very short texts can't be meaningfully compared
-                unique_results.append(result)
-                continue
-            
-            # Check for near-duplicates
-            is_duplicate = False
-            for seen_text in seen_texts:
-                # Simple similarity check (can be enhanced with embeddings)
-                if self.text_similarity(text, seen_text) > 0.8:
-                    is_duplicate = True
-                    break
-            
-            if not is_duplicate:
-                seen_texts.add(text)
-                unique_results.append(result)
-        
-        return unique_results
-    
-    def text_similarity(self, text1: str, text2: str) -> float:
-        """Calculate simple text similarity (can be replaced with embedding similarity)"""
-        # Simple Jaccard similarity of words
-        words1 = set(text1.split())
-        words2 = set(text2.split())
-        
-        if not words1 or not words2:
-            return 0.0
-        
-        intersection = len(words1.intersection(words2))
-        union = len(words1.union(words2))
-        
-        return intersection / union if union > 0 else 0.0
 
 # Initialize singleton instance
 _retriever_instance = None
@@ -276,7 +254,7 @@ def get_retriever():
     return _retriever_instance
 
 # Backward compatibility function
-def retrieve_answer_chunks(query, top_k=20):
+def retrieve_answer_chunks(query, top_k=20, rerank=True, deduplicate=True):
     """Legacy function for backward compatibility"""
     retriever = get_retriever()
-    return retriever.retrieve_answer_chunks(query, top_k=top_k)
+    return retriever.retrieve_answer_chunks(query, top_k=top_k, rerank=rerank, deduplicate=deduplicate)

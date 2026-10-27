@@ -1,22 +1,19 @@
-import torch
-from PIL import Image
+"""Compatibility wrapper for CLIP vision/text embeddings."""
+
+from __future__ import annotations
+
 import numpy as np
-from transformers import CLIPModel, CLIPProcessor
+
+from vision_embeddings import VISION_EMBEDDING_DIMENSION, VisionEmbedder
+
 
 class VisionProcessor:
     def __init__(self):
-        self.model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
-        self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-    
+        self.embedder = VisionEmbedder()
+
     def embed_image(self, image_path):
-        image = Image.open(image_path)
-        inputs = self.processor(images=image, return_tensors="pt")
-        with torch.no_grad():
-            features = self.model.get_image_features(**inputs)
-        return features.numpy()
-    
+        return self.embedder.embed_image(image_path)
+
     def embed_text_for_vision(self, text):
-        inputs = self.processor(text=text, return_tensors="pt")
-        with torch.no_grad():
-            features = self.model.get_text_features(**inputs)
-        return features.numpy()
+        embedding = self.embedder.embed_text(text)
+        return np.asarray(embedding, dtype=np.float32).reshape(VISION_EMBEDDING_DIMENSION)

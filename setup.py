@@ -6,11 +6,11 @@ import subprocess
 def setup_environment():
     """Setup script for installation"""
     
-    print("🚀 Setting up Multi-Modal RAG System")
+    print("Setting up Multi-Modal RAG System")
     
     # Check Python version
     if sys.version_info < (3, 8):
-        print("❌ Python 3.8+ required")
+        print("Python 3.8+ required")
         sys.exit(1)
     
     # Create directory structure
@@ -24,15 +24,15 @@ def setup_environment():
     
     for directory in directories:
         os.makedirs(directory, exist_ok=True)
-        print(f"📁 Created: {directory}")
+        print(f"Created: {directory}")
     
     # Check for Tesseract
     try:
         import pytesseract
         pytesseract.get_tesseract_version()
-        print("✅ Tesseract found")
+        print("Tesseract found")
     except:
-        print("⚠️  Tesseract not found. Install:")
+        print("Tesseract not found. Install:")
         print("  macOS: brew install tesseract")
         print("  Ubuntu: sudo apt install tesseract-ocr")
         print("  Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki")
@@ -58,9 +58,9 @@ OVERLAP=100
     if not os.path.exists(".env"):
         with open(".env.template", "w") as f:
             f.write(env_template)
-        print("📄 Created .env.template - Fill with your API keys")
+        print("Created .env.template - Fill with your API keys")
     
-    print("\n✅ Setup complete!")
+    print("\nSetup complete!")
     print("Next steps:")
     print("1. Fill in .env.template with your API keys")
     print("2. Rename to .env")

@@ -2,6 +2,12 @@ import numpy as np
 from typing import List, Dict, Optional
 import logging
 
+# FIXED: Added proper import with try/except
+try:
+    from unified_embeddings import UnifiedEmbedder
+except ImportError:
+    UnifiedEmbedder = None
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -11,9 +17,9 @@ class CrossModalReranker:
         try:
             from unified_embeddings import UnifiedEmbedder
             self.unified_embedder = UnifiedEmbedder()
-            logger.info("✅ CrossModalReranker initialized successfully")
-        except ImportError as e:
-            logger.warning(f"⚠️ UnifiedEmbedder not found: {e}")
+            logger.info("CrossModalReranker initialized successfully")
+        except Exception as e:
+            logger.warning(f"UnifiedEmbedder unavailable: {e}")
             # Create a dummy embedder for fallback
             self.unified_embedder = None
     
@@ -145,8 +151,25 @@ class CrossModalReranker:
         
         return modalities
 
-# ========== SINGLETON PATTERN ==========
+    def hybrid_rerank(self, query: str, text_results: List[Dict],
+                      image_results: Optional[List[Dict]] = None, top_k: int = 10) -> List[Dict]:
+        """Backward-compatible helper for separate text and image result lists."""
+        combined = []
+        for rank, result in enumerate(text_results or []):
+            item = dict(result)
+            item["type"] = item.get("type", "text")
+            item["score"] = float(item.get("score", 1.0 / (rank + 1)))
+            combined.append(item)
 
+        for rank, result in enumerate(image_results or []):
+            item = dict(result)
+            item["type"] = item.get("type", "image")
+            item["score"] = float(item.get("score", 1.0 / (rank + 1)))
+            combined.append(item)
+
+        return self.rerank(query, combined, top_k=top_k)
+
+# ========== SINGLETON PATTERN ==========
 
 _reranker_instance = None
 

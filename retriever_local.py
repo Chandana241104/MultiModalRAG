@@ -12,6 +12,7 @@ class LocalRetriever:
         self.documents = []
         self.embeddings = None
         self.metadata = {}
+        self._loaded = False
         self.load_data()
     
     def load_data(self):
@@ -19,7 +20,8 @@ class LocalRetriever:
         storage_dir = Path("data/local_store")
         
         if not storage_dir.exists():
-            print("⚠️  No local data found. Run ingest_local.py first.")
+            print("No local data found. Run ingest_local.py first.")
+            self._loaded = False
             return
         
         try:
@@ -34,17 +36,22 @@ class LocalRetriever:
             with open(storage_dir / "metadata.json", "r", encoding="utf-8") as f:
                 self.metadata = json.load(f)
             
-            print(f"✅ Loaded {len(self.documents)} documents from local storage")
-            print(f"✅ Embeddings shape: {self.embeddings.shape}")
+            self._loaded = True
+            print(f"Loaded {len(self.documents)} documents from local storage")
+            print(f"Embeddings shape: {self.embeddings.shape}")
             
-            # Show document types
             if 'document_types' in self.metadata:
                 for doc_type, count in self.metadata['document_types'].items():
                     print(f"   - {doc_type}: {count}")
                     
         except Exception as e:
-            print(f"❌ Error loading data: {e}")
-            print("⚠️  Run ingest_local.py first to create the data")
+            print(f"Error loading data: {e}")
+            print("Run ingest_local.py first to create the data")
+            self._loaded = False
+    
+    def is_loaded(self) -> bool:
+        """Check if data is loaded"""
+        return self._loaded and len(self.documents) > 0
     
     def clean_text(self, text: str) -> str:
         """Clean text from dictionary strings"""
@@ -53,7 +60,6 @@ class LocalRetriever:
         
         text = text.strip()
         
-        # Try to parse as dict
         if text.startswith("{") and "text" in text:
             try:
                 parsed = ast.literal_eval(text)
@@ -61,7 +67,6 @@ class LocalRetriever:
             except:
                 pass
         
-        # Simple cleanup
         clean = text.replace("{'text':", "").replace('{"text":', "")
         clean = clean.replace("'}", "").replace('"馊', "")
         return clean.strip()
@@ -70,8 +75,8 @@ class LocalRetriever:
         """Retrieve relevant chunks using cosine similarity"""
         from embeddings import embed_text
         
-        if not self.documents or self.embeddings is None:
-            print("⚠️  No data loaded")
+        if not self.is_loaded():
+            print("No data loaded. Please run ingest_local.py first.")
             return []
         
         # Embed query
@@ -79,7 +84,6 @@ class LocalRetriever:
         if hasattr(query_embedding, "tolist"):
             query_embedding = query_embedding.tolist()
         
-        # Flatten if needed
         if isinstance(query_embedding, list) and query_embedding:
             if isinstance(query_embedding[0], list):
                 query_embedding = query_embedding[0]
@@ -94,7 +98,6 @@ class LocalRetriever:
             
             vec = np.array(doc_vec)
             
-            # Cosine similarity
             norm_vec = np.linalg.norm(vec)
             norm_query = np.linalg.norm(query_vec)
             
@@ -116,7 +119,6 @@ class LocalRetriever:
                 text = self.clean_text(doc["text"])
                 
                 if text and len(text) > 10:
-                    # Format the chunk with source info
                     source_info = f"[Page {doc.get('page', '?')} | {doc.get('type', 'text').upper()}]"
                     results.append(f"{source_info} {text[:500]}...")
         

@@ -73,9 +73,9 @@ class MultiModalEvaluator:
         try:
             with open(path, 'w', encoding='utf-8') as f:
                 json.dump(sample_queries, f, indent=2, ensure_ascii=False)
-            print(f"✅ Created evaluation queries at: {path}")
+            print(f"Created evaluation queries at: {path}")
         except Exception as e:
-            print(f"⚠️  Could not save queries: {e}")
+            print(f"Could not save queries: {e}")
         
         return sample_queries
     
@@ -233,9 +233,9 @@ class MultiModalEvaluator:
             os.makedirs("data/evaluation", exist_ok=True)
             results_df.to_csv("data/evaluation/evaluation_results.csv", index=False)
             results_df.to_json("data/evaluation/evaluation_results.json", orient="records", indent=2)
-            print(f"✅ Saved evaluation results to data/evaluation/")
+            print("Saved evaluation results to data/evaluation/")
         except Exception as e:
-            print(f"⚠️  Could not save results: {e}")
+            print(f"Could not save results: {e}")
         
         return results_df
     
@@ -378,7 +378,7 @@ def create_evaluation_dashboard(results_df: pd.DataFrame):
 # Quick test function
 def quick_test():
     """Quick test to verify evaluator works"""
-    print("🧪 Testing MultiModalEvaluator...")
+    print("Testing MultiModalEvaluator...")
     
     # Create dummy retriever and answer functions for testing
     def dummy_retriever(query, top_k=10):
@@ -394,11 +394,11 @@ def quick_test():
     results = evaluator.run_full_evaluation(dummy_retriever, dummy_answer, max_questions=2)
     
     if not results.empty:
-        print("✅ Evaluator test passed!")
+        print("Evaluator test passed!")
         print(f"Results shape: {results.shape}")
         return True
     else:
-        print("❌ Evaluator test failed")
+        print("Evaluator test failed")
         return False
 
 if __name__ == "__main__":

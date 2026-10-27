@@ -1,68 +1,107 @@
-# embeddings.py - Updated with better error handling
-import os
-import time
-from sentence_transformers import SentenceTransformer
-import logging
+"""Text embedding helpers for the RAG pipeline."""
 
-# Disable verbose logging
+from __future__ import annotations
+
+import hashlib
+import logging
+import time
+from typing import Iterable
+
+import numpy as np
+
+try:
+    from sentence_transformers import SentenceTransformer
+except Exception:  # pragma: no cover - exercised only when dependency is absent
+    SentenceTransformer = None
+
+
 logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
 logging.getLogger("transformers").setLevel(logging.WARNING)
 
-# Try to load model with retries
-def load_model_with_retry(model_name="paraphrase-MiniLM-L3-v2", max_retries=3):
+EMBEDDING_DIMENSION = 384
+_model = None
+
+
+class DummyModel:
+    """Deterministic fallback used when sentence-transformers is unavailable."""
+
+    def encode(self, texts, **kwargs):
+        if isinstance(texts, str):
+            texts = [texts]
+        return np.vstack([_deterministic_vector(text) for text in texts]).astype(np.float32)
+
+
+def _deterministic_vector(text: str, dimension: int = EMBEDDING_DIMENSION) -> np.ndarray:
+    digest = hashlib.sha256(text.encode("utf-8", errors="ignore")).digest()
+    seed = int.from_bytes(digest[:8], "little", signed=False)
+    rng = np.random.default_rng(seed)
+    vector = rng.normal(size=dimension).astype(np.float32)
+    norm = np.linalg.norm(vector)
+    return vector / norm if norm else vector
+
+
+def load_model_with_retry(model_name: str = "paraphrase-MiniLM-L3-v2", max_retries: int = 3):
+    if SentenceTransformer is None:
+        print("sentence-transformers is not installed. Using dummy embeddings.")
+        return DummyModel()
+
     for attempt in range(max_retries):
         try:
             print(f"Attempt {attempt + 1}/{max_retries} to load model...")
             model = SentenceTransformer(model_name)
-            print(f"✅ Model '{model_name}' loaded successfully")
+            print(f"Model '{model_name}' loaded successfully.")
             return model
-        except Exception as e:
-            print(f"❌ Attempt {attempt + 1} failed: {e}")
+        except Exception as exc:
+            print(f"Attempt {attempt + 1} failed: {exc}")
             if attempt < max_retries - 1:
-                wait_time = 2 ** attempt  # Exponential backoff
+                wait_time = 2**attempt
                 print(f"Waiting {wait_time} seconds before retry...")
                 time.sleep(wait_time)
-            else:
-                print("⚠️  Falling back to a smaller model...")
-                try:
-                    return SentenceTransformer("all-MiniLM-L6-v2")
-                except:
-                    raise Exception(f"Failed to load any model after {max_retries} attempts")
 
-# Load model with retry mechanism
-try:
-    model = load_model_with_retry("paraphrase-MiniLM-L3-v2")
-except Exception as e:
-    print(f"❌ Could not load model: {e}")
-    # Create a dummy model for testing
-    class DummyModel:
-        def encode(self, texts, **kwargs):
-            import numpy as np
-            if isinstance(texts, str):
-                texts = [texts]
-            return np.random.randn(len(texts), 384).astype(np.float32)
-    
-    model = DummyModel()
-    print("⚠️  Using dummy model for testing. Real embeddings won't work.")
+    try:
+        fallback_name = "all-MiniLM-L6-v2"
+        print(f"Falling back to '{fallback_name}'.")
+        return SentenceTransformer(fallback_name)
+    except Exception as exc:
+        print(f"Could not load any embedding model: {exc}")
+        print("Using dummy embeddings. Retrieval quality will be limited.")
+        return DummyModel()
+
+
+def get_model():
+    global _model
+    if _model is None:
+        _model = load_model_with_retry()
+    return _model
+
+
+def _clean_texts(texts: Iterable[str]) -> list[str]:
+    return [str(text).replace("\n", " ").strip() for text in texts]
+
 
 def embed_text(texts):
     """
-    Embed single text or list of texts.
-    Normalizes embeddings for better cosine similarity.
-    """
-    if isinstance(texts, str):
-        texts = [texts]
+    Embed a single string or a list of strings.
 
-    texts = [t.replace("\n", " ").strip() for t in texts]
-    
+    Returns a 1D vector for a single string and a 2D array for a list, matching
+    the expectations of the retrievers and tests.
+    """
+    single_input = isinstance(texts, str)
+    batch = [texts] if single_input else list(texts)
+    batch = _clean_texts(batch)
+
     try:
-        embeddings = model.encode(texts, convert_to_numpy=True, normalize_embeddings=True)
-        return embeddings
-    except Exception as e:
-        print(f"⚠️  Embedding error: {e}")
-        # Return random embeddings for testing
-        import numpy as np
-        if isinstance(texts, list):
-            return np.random.randn(len(texts), 384).astype(np.float32)
-        else:
-            return np.random.randn(1, 384).astype(np.float32)
+        embeddings = get_model().encode(
+            batch,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+        )
+        embeddings = np.asarray(embeddings, dtype=np.float32)
+    except Exception as exc:
+        print(f"Embedding error: {exc}")
+        embeddings = np.vstack([_deterministic_vector(text) for text in batch]).astype(np.float32)
+
+    if embeddings.ndim == 1:
+        embeddings = embeddings.reshape(1, -1)
+
+    return embeddings[0] if single_input else embeddings

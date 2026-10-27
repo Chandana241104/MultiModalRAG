@@ -23,8 +23,8 @@ def enhance_existing_system():
     from cross_modal_reranker import get_reranker
     reranker = get_reranker()
     
-    print(f"✅ Extracted {len(tables)} tables")
-    print(f"✅ Extracted {len(charts)} charts")
-    print("✅ Multi-modal components ready")
+    print(f"Extracted {len(tables)} tables")
+    print(f"Extracted {len(charts)} charts")
+    print("Multi-modal components ready")
     
     return embedder, reranker, tables, charts

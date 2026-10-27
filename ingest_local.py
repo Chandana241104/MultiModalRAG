@@ -15,7 +15,7 @@ try:
     from embeddings import embed_text
     from chunking import chunk_text
 except ImportError as e:
-    print(f"❌ Import error: {e}")
+    print(f"Import error: {e}")
     sys.exit(1)
 
 load_dotenv()
@@ -23,10 +23,11 @@ load_dotenv()
 PDF_PATH = os.getenv("PDF_PATH", "data/documents/sample.pdf")
 
 if not os.path.exists(PDF_PATH):
-    print(f"❌ PDF not found: {PDF_PATH}")
+    print(f"PDF not found: {PDF_PATH}")
+    print("Please place your PDF at data/documents/sample.pdf")
     sys.exit(1)
 
-print(f"📄 Processing: {PDF_PATH}")
+print(f"Processing: {PDF_PATH}")
 
 # 1. Extract content
 print("\n1. Extracting content...")
@@ -47,41 +48,46 @@ for page_num, text in enumerate(text_pages, 1):
     if text.strip():
         chunks = chunk_text(text, 500)
         for chunk in chunks:
-            all_data.append({
-                "text": chunk,
-                "page": page_num,
-                "type": "text",
-                "source": "text_extraction"
-            })
-            texts_for_embedding.append(chunk)
+            if len(chunk.strip()) > 20:  # Only keep substantial chunks
+                all_data.append({
+                    "text": chunk,
+                    "page": page_num,
+                    "type": "text",
+                    "source": "text_extraction"
+                })
+                texts_for_embedding.append(chunk)
 
 # Tables
 for table in tables:
     if table.get("text", "").strip():
-        all_data.append({
-            "text": table["text"],
-            "page": table.get("page", 0),
-            "type": "table",
-            "source": "table_extraction"
-        })
-        texts_for_embedding.append(table["text"])
+        table_text = table["text"]
+        if len(table_text.strip()) > 20:
+            all_data.append({
+                "text": table_text,
+                "page": table.get("page", 0),
+                "type": "table",
+                "source": "table_extraction"
+            })
+            texts_for_embedding.append(table_text)
 
 # Images OCR
 for image in images:
     if image.get("text", "").strip():
-        all_data.append({
-            "text": image["text"],
-            "page": image.get("page", 0),
-            "type": "image_ocr",
-            "source": "image_ocr"
-        })
-        texts_for_embedding.append(image["text"])
+        image_text = image["text"]
+        if len(image_text.strip()) > 20:
+            all_data.append({
+                "text": image_text,
+                "page": image.get("page", 0),
+                "type": "image_ocr",
+                "source": "image_ocr"
+            })
+            texts_for_embedding.append(image_text)
 
 if not all_data:
-    print("❌ No data extracted!")
+    print("No data extracted! Please check your PDF file.")
     sys.exit(1)
 
-print(f"📊 Total documents: {len(all_data)}")
+print(f"Total documents: {len(all_data)}")
 
 # 3. Create text embeddings
 print("\n2. Creating embeddings...")
@@ -115,8 +121,11 @@ metadata = {
 with open(storage_dir / "metadata.json", "w", encoding="utf-8") as f:
     json.dump(metadata, f, indent=2)
 
-print(f"✅ Saved {len(all_data)} documents to {storage_dir}/")
-print(f"✅ Embedding shape: {text_embeddings.shape}")
+print(f"Saved {len(all_data)} documents to {storage_dir}/")
+print(f"Embedding shape: {text_embeddings.shape}")
+print("\nDocument type breakdown:")
+for doc_type, count in metadata["document_types"].items():
+    print(f"  - {doc_type}: {count}")
 
-print("\n🎉 Ingestion complete!")
+print("\nIngestion complete!")
 print("Now run: streamlit run app.py")

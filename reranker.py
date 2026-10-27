@@ -1,105 +1,97 @@
-# app_enhanced.py (Updated Streamlit App)
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-from retriever import EnhancedRetriever
-from llm import EnhancedLLM
-from evaluator import create_evaluation_dashboard
+"""Lightweight cross-modal reranking utilities."""
 
-# Initialize components
-@st.cache_resource
-def init_components():
-    retriever = EnhancedRetriever()
-    llm = EnhancedLLM()
-    return retriever, llm
+from __future__ import annotations
 
-def main():
-    st.set_page_config(page_title="Multi-Modal RAG Pro", layout="wide")
-    
-    # Sidebar
-    with st.sidebar:
-        st.header("⚙️ Settings")
-        top_k = st.slider("Retrieval Count", 5, 50, 20)
-        rerank_enabled = st.checkbox("Enable Cross-Modal Reranking", True)
-        show_debug = st.checkbox("Show Debug Info", False)
-        
-        # Evaluation section
-        if st.button("Run Evaluation"):
-            with st.spinner("Running evaluation..."):
-                from evaluator import MultiModalEvaluator
-                evaluator = MultiModalEvaluator()
-                results = evaluator.run_full_evaluation(
-                    retriever.retrieve,
-                    llm.generate_answer
-                )
-                create_evaluation_dashboard(results)
-    
-    # Main area
-    st.title("🤖 Multi-Modal Document Intelligence")
-    
-    # Tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["💬 Chat", "📊 Analysis", "🔍 Evaluation", "📈 Dashboard"])
-    
-    with tab1:
-        question = st.text_input("Ask about the document:", key="chat_input")
-        
-        if question:
-            with st.spinner("Analyzing document..."):
-                # Retrieve with enhanced system
-                results = retriever.retrieve(question, top_k=top_k, 
-                                            rerank=rerank_enabled)
-                
-                # Generate answer with citations
-                answer, citations, confidence = llm.generate_answer_with_citations(
-                    results, question
-                )
-                
-                # Display answer
-                st.subheader("💡 Answer")
-                st.markdown(answer)
-                
-                # Confidence score
-                st.progress(confidence / 100, text=f"Confidence: {confidence:.1f}%")
-                
-                # Citations
-                with st.expander("📚 Source Citations"):
-                    for citation in citations:
-                        st.markdown(f"**Page {citation['page']}** ({citation['type']})")
-                        st.text(citation['text'][:200] + "...")
-                
-                # Visualize retrieval results
-                if show_debug:
-                    with st.expander("🔍 Retrieval Analysis"):
-                        # Create modality distribution
-                        modalities = [r['type'] for r in results]
-                        df = pd.DataFrame({'Modality': modalities})
-                        fig = px.pie(df, names='Modality', title="Retrieved Content Types")
-                        st.plotly_chart(fig)
-                        
-                        # Show raw results
-                        for i, result in enumerate(results[:5]):
-                            st.text(f"Result {i+1}: {result['type']} (Score: {result.get('score', 0):.3f})")
-                            st.text(result['text'][:150] + "...")
-    
-    with tab2:
-        st.subheader("Document Analysis")
-        # Add summarization feature
-        if st.button("Generate Document Summary"):
-            with st.spinner("Generating summary..."):
-                summary = llm.generate_document_summary()
-                st.markdown(summary)
-    
-    with tab4:
-        # Real-time metrics dashboard
-        st.subheader("System Performance")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Retrieval Latency", "120ms", "-5ms")
-        with col2:
-            st.metric("Answer Quality", "92%", "2%")
-        with col3:
-            st.metric("Multi-Modal Coverage", "85%", "5%")
+from typing import Dict, List, Optional
 
-if __name__ == "__main__":
-    retriever, llm = init_components()
-    main()
+import numpy as np
+
+
+class CrossModalReranker:
+    """Combine text and image retrieval results into one ranked list."""
+
+    def cosine_similarity(self, vec1, vec2) -> float:
+        if vec1 is None or vec2 is None:
+            return 0.0
+
+        arr1 = np.asarray(vec1, dtype=np.float32).flatten()
+        arr2 = np.asarray(vec2, dtype=np.float32).flatten()
+
+        if arr1.size == 0 or arr2.size == 0:
+            return 0.0
+
+        if arr1.size != arr2.size:
+            size = min(arr1.size, arr2.size)
+            arr1 = arr1[:size]
+            arr2 = arr2[:size]
+
+        norm1 = np.linalg.norm(arr1)
+        norm2 = np.linalg.norm(arr2)
+        if norm1 == 0 or norm2 == 0:
+            return 0.0
+
+        return float(np.dot(arr1, arr2) / (norm1 * norm2))
+
+    def hybrid_rerank(
+        self,
+        query: str,
+        text_results: List[Dict],
+        image_results: Optional[List[Dict]] = None,
+        top_k: int = 10,
+        text_weight: float = 0.7,
+        image_weight: float = 0.3,
+    ) -> List[Dict]:
+        """Merge text and image results and sort by a normalized hybrid score."""
+        merged: List[Dict] = []
+
+        for rank, result in enumerate(text_results or []):
+            item = dict(result)
+            base_score = float(item.get("score", 1.0 / (rank + 1)))
+            item["type"] = item.get("type", "text")
+            item["hybrid_score"] = text_weight * base_score
+            merged.append(item)
+
+        for rank, result in enumerate(image_results or []):
+            item = dict(result)
+            base_score = float(item.get("score", 1.0 / (rank + 1)))
+            item["type"] = item.get("type", "image")
+            item["hybrid_score"] = image_weight * base_score
+            merged.append(item)
+
+        merged.sort(key=lambda item: item.get("hybrid_score", item.get("score", 0.0)), reverse=True)
+        return merged[:top_k]
+
+    def rerank(
+        self,
+        query: str,
+        results: List[Dict],
+        modality_weights: Optional[Dict[str, float]] = None,
+        top_k: int = 10,
+    ) -> List[Dict]:
+        """Rerank a single mixed result list by modality-weighted scores."""
+        modality_weights = modality_weights or {"text": 0.7, "table": 0.6, "image": 0.5, "image_ocr": 0.5}
+        reranked = []
+
+        for rank, result in enumerate(results or []):
+            item = dict(result)
+            modality = str(item.get("type", "text")).lower()
+            base_score = float(item.get("score", 1.0 / (rank + 1)))
+            item["cross_modal_score"] = base_score * modality_weights.get(modality, 0.5)
+            reranked.append(item)
+
+        reranked.sort(key=lambda item: item.get("cross_modal_score", 0.0), reverse=True)
+        return reranked[:top_k]
+
+
+_reranker_instance = None
+
+
+def get_reranker():
+    global _reranker_instance
+    if _reranker_instance is None:
+        _reranker_instance = CrossModalReranker()
+    return _reranker_instance
+
+
+def create_cross_modal_reranker():
+    return get_reranker()

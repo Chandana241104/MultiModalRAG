@@ -1,18 +1,32 @@
-# requirements_clean.txt - No problematic packages
+# Core Dependencies
 streamlit>=1.28.0
 pymupdf>=1.23.0
 Pillow>=10.0.0
 sentence-transformers>=2.2.0
 pinecone-client>=3.0.0
-openai>=1.0.0
 pandas>=2.0.0
 python-dotenv>=1.0.0
+numpy>=1.24.0
+
+# OCR and Vision
 easyocr>=1.7.0
 opencv-python>=4.8.0
-matplotlib>=3.7.0
-langchain>=0.0.148
+pytesseract>=0.3.10
+camelot-py[cv]>=0.11.0
+transformers>=4.30.0
+torch>=2.0.0
+torchvision>=0.15.0
+
+# LLM and Evaluation
+google-genai>=1.0.0
+scikit-learn>=1.3.0
+plotly>=5.14.0
+
+# Utilities
 tqdm>=4.65.0
-google-generativeai>=0.3.0
-pdfplumber>=0.10.0  # Use instead of camelot for Windows
-numpy>=1.24.0
-scikit-learn>=1.3.0  # For evaluation metrics
+psutil>=5.9.0
+matplotlib>=3.7.0
+
+# Optional but recommended
+pdfplumber>=0.10.0
+langchain>=0.0.148

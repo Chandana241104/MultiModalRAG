@@ -11,22 +11,26 @@ import camelot
 import easyocr
 import cv2
 import numpy as np
+from vision_embeddings import get_vision_embedder  # FIXED: Added import at top
 
 # -------------------------
 # Tesseract Configuration
 # -------------------------
 # NOTE: If Tesseract is not in your PATH, uncomment and set the path below:
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+try:
+    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+except:
+    pass
 
 # specific check to warn user if tesseract is missing
 if not shutil.which("tesseract") and not os.path.exists(getattr(pytesseract.pytesseract, 'tesseract_cmd', '')):
-    print("⚠️  WARNING: Tesseract-OCR not found in PATH. OCR might fail.")
+    print("WARNING: Tesseract-OCR not found in PATH. OCR might fail.")
 
 # Initialize EasyOCR
 try:
     reader = easyocr.Reader(['en'], gpu=False) # Set gpu=True if you have CUDA
 except Exception as e:
-    print(f"⚠️  EasyOCR initialization failed: {e}")
+    print(f"EasyOCR initialization failed: {e}")
     reader = None
 
 # -------------------------
@@ -36,52 +40,79 @@ def extract_text(pdf_path):
     doc = fitz.open(pdf_path)
     pages = []
     for page in doc:
-        # "blocks" often separates text better than "text"
         text = page.get_text("text") 
         pages.append(text)
+    doc.close()
     return pages
 
 # -------------------------
 # Extract images OCR per page
 # -------------------------
-def extract_images_ocr(pdf_path):
-    doc = fitz.open(pdf_path)
-    ocr_results = []
 
-    for page_num, page in enumerate(doc, start=1):
-        image_list = page.get_images(full=True)
-        
-        # If page has no text and no embedded images, it might be a full-page scan
-        # handled better by converting the whole page to an image, but adhering 
-        # to your requested flow, we process embedded images:
-        
-        for img_index, img in enumerate(image_list, start=1):
-            try:
-                xref = img[0]
-                pix = fitz.Pixmap(doc, xref)
-                
-                if pix.n < 5:  # grayscale or RGB
-                    mode = "RGB"
-                else:  # CMYK
-                    pix = fitz.Pixmap(fitz.csRGB, pix)
-                    mode = "RGB"
-                
-                # Convert to PIL Image
-                image = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
-                
-                # Run Tesseract OCR
-                text = pytesseract.image_to_string(image)
-                
-                if text.strip():
+def extract_images_ocr(pdf_path):
+    """Extract PDF images, save them, and return image metadata with OCR text."""
+    import fitz
+    import pytesseract
+    from PIL import Image
+    from pathlib import Path
+
+    output_dir = Path("data/extracted_images")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    ocr_results = []
+    doc = fitz.open(pdf_path)
+
+    try:
+        for page_num, page in enumerate(doc, start=1):
+            image_list = page.get_images(full=True)
+
+            for img_index, img in enumerate(image_list, start=1):
+                try:
+                    xref = img[0]
+                    pix = fitz.Pixmap(doc, xref)
+
+                    # Convert CMYK images to RGB when necessary.
+                    if pix.n >= 5:
+                        rgb_pix = fitz.Pixmap(fitz.csRGB, pix)
+                        pix = rgb_pix
+
+                    image = Image.frombytes(
+                        "RGB" if pix.n >= 3 else "L",
+                        (pix.width, pix.height),
+                        pix.samples,
+                    ).convert("RGB")
+
+                    image_path = output_dir / (
+                        f"page_{page_num}_image_{img_index}.png"
+                    )
+                    image.save(image_path, format="PNG")
+
+                    try:
+                        ocr_text = pytesseract.image_to_string(image).strip()
+                    except Exception as exc:
+                        print(f"OCR failed on page {page_num}, image {img_index}: {exc}")
+                        ocr_text = ""
+
                     ocr_results.append({
-                        "text": text.strip(),
+                        "text": ocr_text,
                         "page": page_num,
-                        "image_index": img_index
+                        "image_index": img_index,
+                        "image_path": str(image_path),
                     })
-            except Exception as e:
-                print(f"⚠️  OCR failed on page {page_num}, image {img_index}: {e}")
-                
+
+                    print(f"Saved image: {image_path}")
+
+                except Exception as exc:
+                    print(
+                        f"Image extraction failed on page {page_num}, "
+                        f"image {img_index}: {exc}"
+                    )
+    finally:
+        doc.close()
+
+    print(f"Saved {len(ocr_results)} images to {output_dir}")
     return ocr_results
+
 
 # -------------------------
 # Extract tables per page
@@ -89,17 +120,15 @@ def extract_images_ocr(pdf_path):
 def extract_tables(pdf_path):
     tables_list = []
     try:
-        # 'stream' is often better for reports; 'lattice' for distinct grid lines
         camelot_tables = camelot.read_pdf(pdf_path, pages="all", flavor="stream", suppress_stdout=True)
         for table in camelot_tables:
-            # Only keep tables with meaningful content
             if table.parsing_report['accuracy'] > 70 or len(table.df) > 1:
                 tables_list.append({
                     "text": table.df.to_string(index=False),
                     "page": table.page
                 })
     except Exception as e:
-        print(f"⚠️  Table extraction skipped (Ghostscript installed?): {e}")
+        print(f"Table extraction skipped (Ghostscript installed?): {e}")
     return tables_list
 
 # -------------------------
@@ -124,11 +153,12 @@ def extract_chart_metadata_from_image(image_path):
         }
         return chart_metadata
     except Exception as e:
-        print(f"⚠️  Chart extraction error: {e}")
+        print(f"Chart extraction error: {e}")
         return {}
     
-# Add to your existing ingest_utils.py
-
+# -------------------------
+# Extract charts and figures
+# -------------------------
 def extract_charts_and_figures(pdf_path):
     """Extract chart metadata and generate descriptions"""
     import fitz
@@ -136,6 +166,7 @@ def extract_charts_and_figures(pdf_path):
     import pytesseract
     import cv2
     import numpy as np
+    import os
     
     doc = fitz.open(pdf_path)
     chart_data = []
@@ -186,19 +217,20 @@ def extract_charts_and_figures(pdf_path):
                     })
                 
                 # Cleanup
-                import os
                 if os.path.exists(image_filename):
                     os.remove(image_filename)
                     
             except Exception as e:
-                print(f"⚠️  Chart extraction error on page {page_num}: {e}")
+                print(f"Chart extraction error on page {page_num}: {e}")
     
+    doc.close()
     return chart_data
 
 def analyze_chart_image(image_path):
     """Analyze image to determine if it's a chart and extract metadata"""
     import cv2
     import numpy as np
+    import pytesseract
     
     try:
         img = cv2.imread(image_path)
@@ -216,7 +248,6 @@ def analyze_chart_image(image_path):
         circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, 20, param1=50, param2=30, minRadius=5, maxRadius=50)
         
         # Check for text (labels, legends)
-        import pytesseract
         ocr_text = pytesseract.image_to_string(img)
         
         # Determine chart type based on features
@@ -258,84 +289,72 @@ def analyze_chart_image(image_path):
 
 def generate_chart_description(image_path, metadata):
     """Generate a description of the chart"""
-    from llm import get_llm
-    
-    ocr_text = metadata.get("ocr_text", "")
-    chart_type = metadata.get("chart_type", "chart")
-    
-    prompt = f"""
-    Based on OCR text from a chart image, provide a concise description:
-    
-    OCR Text: {ocr_text}
-    Chart Type: {chart_type}
-    
-    Create a 1-2 sentence description of what this chart shows.
-    Focus on any numbers, labels, or trends mentioned.
-    """
-    
     try:
-        llm = get_llm()
-        # Use a simple context since we don't have much
-        description = llm.generate_answer("", prompt)
-        return description
+        from llm import get_llm
+        
+        ocr_text = metadata.get("ocr_text", "")
+        chart_type = metadata.get("chart_type", "chart")
+        
+        prompt = f"""
+        Based on OCR text from a chart image, provide a concise description:
+        
+        OCR Text: {ocr_text}
+        Chart Type: {chart_type}
+        
+        Create a 1-2 sentence description of what this chart shows.
+        Focus on any numbers, labels, or trends mentioned.
+        """
+        
+        try:
+            llm = get_llm()
+            description = llm.generate_answer("", prompt)
+            return description
+        except:
+            return f"A {chart_type} showing data related to: {ocr_text[:100]}..."
     except:
-        # Fallback description
-        return f"A {chart_type} showing data related to: {ocr_text[:100]}..."
+        return f"A {chart_type} chart showing evaluation data"
 
-# Add this function to the imports
-from vision_embeddings import get_vision_embedder
 def extract_structured_tables(pdf_path):
     """Extract tables with structure preservation"""
     import pandas as pd
     import camelot
     
-    tables = camelot.read_pdf(pdf_path, flavor='lattice', pages='all')
-    structured_tables = []
-    
-    for table in tables:
-        df = table.df
+    try:
+        tables = camelot.read_pdf(pdf_path, flavor='lattice', pages='all')
+        structured_tables = []
         
-        # Convert to structured representation
-        table_data = {
-            "data": df.values.tolist(),
-            "columns": df.columns.tolist(),
-            "text": df.to_string(index=False),
-            "html": df.to_html(),
-            "shape": df.shape,
-            "page": table.page
-        }
-        structured_tables.append(table_data)
-    
-    return structured_tables
-def extract_structured_tables(pdf_path):
-    """Simplified table extraction for demo"""
-    print("📊 Extracting tables (simplified)...")
-    
-    # Mock data for demo
-    return [
-        {
-            "id": 0,
-            "page": 1,
-            "data": [["Criteria", "Weight"], ["Accuracy", "25%"]],
-            "columns": ["Criteria", "Weight"],
-            "text": "Criteria  Weight\nAccuracy  25%",
-            "shape": [2, 2],
-            "type": "table"
-        },
-        {
-            "id": 1,
-            "page": 2,
-            "data": [["Multi-modal", "20%"], ["System Design", "20%"]],
-            "columns": ["Criteria", "Weight"],
-            "text": "Criteria       Weight\nMulti-modal   20%\nSystem Design 20%",
-            "shape": [2, 2],
-            "type": "table"
-        }
-    ]
+        for table in tables:
+            df = table.df
+            
+            table_data = {
+                "data": df.values.tolist(),
+                "columns": df.columns.tolist(),
+                "text": df.to_string(index=False),
+                "html": df.to_html(),
+                "shape": df.shape,
+                "page": table.page
+            }
+            structured_tables.append(table_data)
+        
+        return structured_tables
+    except Exception as e:
+        print(f"Table extraction error: {e}")
+        # Return mock data for demo
+        return [
+            {
+                "id": 0,
+                "page": 1,
+                "data": [["Criteria", "Weight"], ["Accuracy", "25%"]],
+                "columns": ["Criteria", "Weight"],
+                "text": "Criteria  Weight\nAccuracy  25%",
+                "shape": [2, 2],
+                "type": "table"
+            }
+        ]
 
 def extract_chart_metadata(pdf_path):
     """Simplified chart extraction for demo"""
-    print("🖼️  Extracting charts (simplified)...")
+    print("Extracting charts (simplified)...")
     
     # Mock data for demo
     return [

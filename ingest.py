@@ -22,10 +22,10 @@ load_dotenv()
 PDF_PATH = os.getenv("PDF_PATH", "data/documents/sample.pdf")
 
 if not os.path.exists(PDF_PATH):
-    print(f"❌ PDF file not found at: {PDF_PATH}")
+    print(f"PDF file not found at: {PDF_PATH}")
     sys.exit(1)
 
-print(f"✅ Starting ingestion for: {PDF_PATH}")
+print(f"Starting ingestion for: {PDF_PATH}")
 
 # -------------------------
 # 1. Extraction Phase
@@ -33,17 +33,17 @@ print(f"✅ Starting ingestion for: {PDF_PATH}")
 print("\n--- Phase 1: Extraction ---")
 
 # A. Text
-print("📄 Extracting text...")
+print("Extracting text...")
 text_pages = extract_text(PDF_PATH)
 print(f"   Found {len(text_pages)} pages.")
 
 # B. Tables
-print("📊 Extracting tables...")
+print("Extracting tables...")
 tables = extract_tables(PDF_PATH)
 print(f"   Found {len(tables)} tables.")
 
 # C. Images/OCR
-print("🖼️  Extracting images & OCR...")
+print("Extracting images and OCR...")
 images = extract_images_ocr(PDF_PATH)
 print(f"   Found {len(images)} images with text.")
 
@@ -58,7 +58,7 @@ print("\n--- Phase 2: Chunking ---")
 # Process Text Pages
 for page_num, page_text in enumerate(text_pages, start=1):
     if not page_text or not page_text.strip():
-        print(f"   ⚠️  Page {page_num} is empty (scanned?). Relying on OCR/Tables.")
+        print(f"   Page {page_num} is empty (scanned?). Relying on OCR/Tables.")
         continue
         
     chunks = chunk_text(page_text, chunk_size=500)
@@ -107,10 +107,10 @@ for img_info in images:
         })
 
 if not all_chunks:
-    print("❌ Critical Error: No data extracted! Check PDF or OCR setup.")
+    print("Critical error: No data extracted. Check PDF or OCR setup.")
     sys.exit(1)
 
-print(f"✅ Total chunks prepared: {len(all_chunks)}")
+print(f"Total chunks prepared: {len(all_chunks)}")
 
 # -------------------------
 # 3. Embedding Phase
@@ -131,7 +131,7 @@ for i in range(0, len(all_chunks), BATCH_SIZE):
             else:
                 vectors.append(emb)
     except Exception as e:
-        print(f"❌ Error embedding batch: {e}")
+        print(f"Error embedding batch: {e}")
 
 # In ingest.py, update the upsert section (around line 150):
 
@@ -165,12 +165,12 @@ for i in range(0, len(vectors), UPSERT_BATCH):
         index.upsert(vectors=pinecone_vectors)
         print(f"   Upserted vectors {i} to {i+len(batch_vecs)}")
     except Exception as e:
-        print(f"❌ Upsert failed: {e}")
+        print(f"Upsert failed: {e}")
         # Try with tuples format
         try:
             tuple_vectors = [(v["id"], v["values"], v["metadata"]) for v in pinecone_vectors]
             index.upsert(vectors=tuple_vectors)
-            print(f"   ✅ Upserted with tuple format")
+            print("   Upserted with tuple format")
         except Exception as e2:
-            print(f"   ❌ Tuple format also failed: {e2}")
-print("\n🎉 Ingestion Complete!")
+            print(f"   Tuple format also failed: {e2}")
+print("\nIngestion complete!")
