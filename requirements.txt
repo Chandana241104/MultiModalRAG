@@ -1,6 +1,7 @@
 # Core Dependencies
 streamlit>=1.28.0
 pymupdf>=1.23.0
+plotly>=5.17.0
 Pillow>=10.0.0
 sentence-transformers>=2.2.0
 pinecone-client>=3.0.0
@@ -30,3 +31,8 @@ matplotlib>=3.7.0
 # Optional but recommended
 pdfplumber>=0.10.0
 langchain>=0.0.148
+tqdm>=4.65.0
+google-generativeai>=0.3.0
+pdfplumber>=0.10.0  # Use instead of camelot for Windows
+numpy>=1.24.0
+scikit-learn>=1.3.0  # For evaluation metrics
