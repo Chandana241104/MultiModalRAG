@@ -8,7 +8,7 @@ Unified ingestion of text, tables, and images using OCR.
 Sentence Transformers + Pinecone vector store.
 
 ## Generation
-OpenAI GPT Model with citation-based answering.
+Google Gemini for text generation, citation-based answers, and optional image analysis.
 
 ## Evaluation
 Accuracy-based evaluation on benchmark questions.

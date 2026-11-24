@@ -84,6 +84,7 @@ Thumbs.db
 data/local_store/*.npy
 data/local_store/*.json
 !data/local_store/.gitkeep
+data/uploads/
 temp_*.png
 temp_*.jpg
 *.pdf  # Exclude if you don't want to commit PDFs

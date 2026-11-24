@@ -49,14 +49,14 @@ def extract_text(pdf_path):
 # Extract images OCR per page
 # -------------------------
 
-def extract_images_ocr(pdf_path):
+def extract_images_ocr(pdf_path, output_dir=None):
     """Extract PDF images, save them, and return image metadata with OCR text."""
     import fitz
     import pytesseract
     from PIL import Image
     from pathlib import Path
 
-    output_dir = Path("data/extracted_images")
+    output_dir = Path(output_dir) if output_dir else Path("data/extracted_images")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     ocr_results = []

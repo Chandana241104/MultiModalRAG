@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 try:
     from pinecone import Pinecone, ServerlessSpec
-except Exception:
+except ImportError:
     Pinecone = None
     ServerlessSpec = None
 
@@ -66,15 +66,45 @@ class MockIndex:
             print(f"Could not load mock data: {e}")
 
     def upsert(self, vectors):
-        self.vectors.extend(vectors or [])
+        existing_ids = {item.get("id") for item in self.vectors}
+        for vector in vectors or []:
+            if vector.get("id") in existing_ids:
+                self.vectors = [
+                    item for item in self.vectors
+                    if item.get("id") != vector.get("id")
+                ]
+            self.vectors.append(vector)
+            existing_ids.add(vector.get("id"))
         return {"upserted_count": len(vectors or [])}
 
-    def query(self, vector, top_k=20, include_metadata=True):
+    @staticmethod
+    def _matches_filter(metadata, metadata_filter):
+        for key, expected in (metadata_filter or {}).items():
+            if isinstance(expected, dict) and "$eq" in expected:
+                expected = expected["$eq"]
+            if metadata.get(key) != expected:
+                return False
+        return True
+
+    def delete(self, filter=None):
+        if not filter:
+            raise ValueError("Mock index deletion requires a metadata filter.")
+
+        before = len(self.vectors)
+        self.vectors = [
+            item for item in self.vectors
+            if not self._matches_filter(item.get("metadata", {}), filter)
+        ]
+        return {"deleted_count": before - len(self.vectors)}
+
+    def query(self, vector, top_k=20, include_metadata=True, filter=None):
         if self.vectors:
             matches = []
             for i, item in enumerate(self.vectors):
                 if isinstance(item, dict):
                     metadata = item.get("metadata", {})
+                    if not self._matches_filter(metadata, filter):
+                        continue
                     item_id = item.get("id", f"mock-{i}")
                     # Calculate similarity if vector is provided
                     if vector and "values" in item:
@@ -100,7 +130,10 @@ class MockIndex:
             matches.sort(key=lambda x: x.score, reverse=True)
             return MockResult(matches[:top_k])
 
-        # Fallback mock data
+        if filter:
+            return MockResult([])
+
+        # Fallback mock data for legacy, unscoped callers.
         return MockResult([MockMatch(i) for i in range(min(top_k, 5))])
 
 
@@ -143,7 +176,7 @@ def _create_index():
 index = _create_index()
 
 
-def query_vector(query_embedding, top_k=20):
+def query_vector(query_embedding, top_k=20, metadata_filter=None):
     """Query the vector store and return matches list."""
     if hasattr(query_embedding, "tolist"):
         query_embedding = query_embedding.tolist()
@@ -156,6 +189,7 @@ def query_vector(query_embedding, top_k=20):
             vector=query_embedding,
             top_k=top_k,
             include_metadata=True,
+            **({"filter": metadata_filter} if metadata_filter else {}),
         )
         matches = getattr(response, "matches", [])
         if matches is None:
@@ -164,3 +198,10 @@ def query_vector(query_embedding, top_k=20):
     except Exception as exc:
         print(f"Query error: {exc}")
         return []
+
+
+def delete_vectors(metadata_filter):
+    """Delete vectors matching a metadata filter without clearing the index."""
+    if not metadata_filter:
+        raise ValueError("Vector deletion requires a metadata filter.")
+    return index.delete(filter=metadata_filter)

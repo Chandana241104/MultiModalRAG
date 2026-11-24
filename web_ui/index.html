@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0c111b;
+      --panel: #131b29;
+      --panel-raised: #182334;
+      --panel-soft: #1d2b3c;
+      --line: #27364a;
+      --ink: #edf3fa;
+      --muted: #91a1b5;
+      --faint: #63748b;
+      --mint: #9af0c8;
+      --blue: #8eb6ff;
+      --amber: #ffcb82;
+      --rose: #ff9a9a;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(ellipse at 86% -10%, rgba(52, 92, 130, 0.18), transparent 38%),
+        var(--bg);
+      color: var(--ink);
+    }
+
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .app-shell {
+      width: min(100%, 1500px);
+      margin: 0 auto;
+      padding: 1.15rem clamp(1rem, 3vw, 2.75rem) 2rem;
+    }
+
+    .topbar {
+      display: flex;
+      min-height: 3.7rem;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.25rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: max-content;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 2.25rem;
+      height: 2.25rem;
+      place-items: center;
+      border: 1px solid rgba(154, 240, 200, 0.45);
+      border-radius: 0.72rem;
+      background: rgba(154, 240, 200, 0.12);
+      color: var(--mint);
+      font-size: 1.05rem;
+      font-weight: 850;
+    }
+
+    .brand-name {
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+    }
+
+    .brand-subtitle {
+      margin-top: 0.16rem;
+      color: var(--muted);
+      font-size: 0.61rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .source-chip {
+      display: flex;
+      max-width: min(44vw, 32rem);
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.56rem 0.82rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(19, 27, 41, 0.8);
+      color: var(--muted);
+      font-size: 0.74rem;
+    }
+
+    .source-chip strong {
+      overflow: hidden;
+      color: var(--ink);
+      font-weight: 650;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .source-dot {
+      width: 0.48rem;
+      height: 0.48rem;
+      flex: 0 0 0.48rem;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 11px rgba(154, 240, 200, 0.38);
+    }
+
+    .nav {
+      display: flex;
+      gap: 0.35rem;
+      margin: 1.15rem 0 1.65rem;
+      padding: 0.35rem;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 0.95rem;
+      background: rgba(19, 27, 41, 0.83);
+    }
+
+    .nav-button {
+      display: flex;
+      min-height: 2.6rem;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0 1rem;
+      border: 1px solid transparent;
+      border-radius: 0.68rem;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.79rem;
+      font-weight: 650;
+      white-space: nowrap;
+      transition: background 130ms ease, color 130ms ease, border-color 130ms ease;
+    }
+
+    .nav-button:hover {
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .nav-button.active {
+      border-color: #34445a;
+      background: #202d3f;
+      color: var(--mint);
+      box-shadow: inset 0 1px rgba(255, 255, 255, 0.045);
+    }
+
+    .nav-index {
+      color: var(--faint);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.68rem;
+    }
+
+    .page-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .eyebrow {
+      color: var(--mint);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0.5rem 0 0.35rem;
+      font-size: clamp(1.7rem, 3.3vw, 2.55rem);
+      font-weight: 720;
+      letter-spacing: -0.055em;
+      line-height: 1.08;
+    }
+
+    .page-description {
+      max-width: 46rem;
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+
+    .page-code {
+      color: var(--faint);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      background: linear-gradient(145deg, rgba(24, 35, 52, 0.94), rgba(19, 27, 41, 0.94));
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    .panel-pad { padding: clamp(1rem, 2vw, 1.5rem); }
+
+    .panel-title {
+      margin: 0;
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+    }
+
+    .panel-hint {
+      margin: 0.35rem 0 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+
+    .grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .grid-two { grid-template-columns: minmax(0, 1.5fr) minmax(16rem, 0.85fr); }
+    .grid-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .metric {
+      min-height: 6rem;
+      padding: 1rem 1.1rem;
+      border: 1px solid var(--line);
+      border-radius: 0.9rem;
+      background: rgba(19, 27, 41, 0.87);
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 0.67rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      margin-top: 0.6rem;
+      color: var(--ink);
+      font-size: 1.45rem;
+      font-weight: 700;
+      letter-spacing: -0.045em;
+    }
+
+    .metric-foot {
+      margin-top: 0.2rem;
+      color: var(--faint);
+      font-size: 0.69rem;
+    }
+
+    .ask-panel { margin-bottom: 1rem; }
+
+    .ask-form {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.7rem;
+      margin-top: 1.1rem;
+    }
+
+    .control {
+      width: 100%;
+      min-height: 2.85rem;
+      padding: 0.78rem 0.9rem;
+      border: 1px solid #35465b;
+      border-radius: 0.7rem;
+      outline: none;
+      background: #101927;
+      color: var(--ink);
+      font-size: 0.86rem;
+      transition: border-color 140ms ease, box-shadow 140ms ease;
+    }
+
+    .control:focus {
+      border-color: #72c9aa;
+      box-shadow: 0 0 0 3px rgba(154, 240, 200, 0.1);
+    }
+
+    .control::placeholder { color: #687b91; }
+
+    select.control { color: var(--muted); }
+
+    .button {
+      display: inline-flex;
+      min-height: 2.75rem;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1rem;
+      border: 1px solid #40516a;
+      border-radius: 0.7rem;
+      background: #202c3d;
+      color: var(--ink);
+      font-size: 0.77rem;
+      font-weight: 700;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+      border-color: #6a829b;
+      background: #27374b;
+    }
+
+    .button.primary {
+      border-color: #9af0c8;
+      background: var(--mint);
+      color: #10251e;
+    }
+
+    .button.primary:hover { background: #b6f7d8; }
+    .button.ghost { background: transparent; }
+    .button.small { min-height: 2.25rem; padding: 0.45rem 0.72rem; }
+    .button:disabled { cursor: not-allowed; opacity: 0.42; transform: none; }
+
+    .empty {
+      display: grid;
+      min-height: 13rem;
+      place-items: center;
+      padding: 2rem;
+      border: 1px dashed #35465b;
+      border-radius: 0.9rem;
+      background: rgba(13, 20, 31, 0.5);
+      text-align: center;
+    }
+
+    .empty-mark {
+      display: grid;
+      width: 2.5rem;
+      height: 2.5rem;
+      place-items: center;
+      margin: 0 auto 0.8rem;
+      border: 1px solid #3b5068;
+      border-radius: 0.75rem;
+      background: #1a283a;
+      color: var(--blue);
+      font-size: 1.1rem;
+    }
+
+    .empty strong { display: block; font-size: 0.88rem; }
+    .empty p { max-width: 26rem; margin: 0.4rem auto 0; color: var(--muted); font-size: 0.77rem; line-height: 1.5; }
+
+    .conversation {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .turn {
+      padding: 1rem 1.1rem;
+      border: 1px solid var(--line);
+      border-radius: 0.9rem;
+      background: rgba(19, 27, 41, 0.8);
+    }
+
+    .turn-question {
+      padding-bottom: 0.8rem;
+      border-bottom: 1px solid var(--line);
+      color: #cbd9e8;
+      font-size: 0.83rem;
+      font-weight: 650;
+      line-height: 1.5;
+    }
+
+    .turn-answer {
+      padding-top: 0.8rem;
+      color: #e7edf5;
+      font-size: 0.83rem;
+      line-height: 1.65;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .turn-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 0.7rem;
+      color: var(--faint);
+      font-size: 0.68rem;
+    }
+
+    .citations {
+      display: grid;
+      gap: 0.45rem;
+      margin-top: 0.7rem;
+    }
+
+    .citation {
+      padding: 0.65rem 0.75rem;
+      border-left: 2px solid #76c9a9;
+      border-radius: 0.25rem 0.55rem 0.55rem 0.25rem;
+      background: rgba(154, 240, 200, 0.055);
+      color: var(--muted);
+      font-size: 0.72rem;
+      line-height: 1.45;
+    }
+
+    .citation strong { color: var(--mint); font-weight: 700; }
+
+    .quick-prompts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.75rem;
+    }
+
+    .prompt-chip {
+      padding: 0.45rem 0.65rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #111a27;
+      color: var(--muted);
+      font-size: 0.69rem;
+      transition: border-color 120ms ease, color 120ms ease;
+    }
+
+    .prompt-chip:hover { border-color: #6a829b; color: var(--ink); }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin: 1.25rem 0 0.7rem;
+    }
+
+    .section-head h2 { margin: 0; font-size: 0.9rem; }
+    .section-head span { color: var(--faint); font-size: 0.7rem; }
+
+    .bar-list { display: grid; gap: 0.9rem; margin-top: 1rem; }
+    .bar-row { display: grid; grid-template-columns: minmax(8rem, 1fr) minmax(6rem, 2fr) 3rem; align-items: center; gap: 0.8rem; }
+    .bar-label { overflow: hidden; color: #cbd6e3; font-size: 0.72rem; text-overflow: ellipsis; white-space: nowrap; }
+    .bar-track { height: 0.48rem; overflow: hidden; border-radius: 99px; background: #243246; }
+    .bar-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #76c9a9, #9af0c8); }
+    .bar-value { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.69rem; text-align: right; }
+
+    .result-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; }
+    .action-card {
+      display: flex;
+      min-height: 7rem;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: 0.9rem;
+      background: rgba(19, 27, 41, 0.78);
+      text-align: left;
+      transition: border-color 130ms ease, transform 130ms ease;
+    }
+    .action-card:hover { transform: translateY(-2px); border-color: #57718c; }
+    .action-card strong { color: var(--ink); font-size: 0.82rem; }
+    .action-card span { color: var(--muted); font-size: 0.71rem; line-height: 1.45; }
+    .action-card i { color: var(--mint); font-size: 1.05rem; font-style: normal; }
+
+    .output-card {
+      margin-top: 1rem;
+      padding: 1.1rem;
+      border: 1px solid #365346;
+      border-radius: 0.9rem;
+      background: rgba(154, 240, 200, 0.055);
+    }
+    .output-card h3 { margin: 0 0 0.55rem; color: var(--mint); font-size: 0.78rem; }
+    .output-text { color: #dce8e7; font-size: 0.8rem; line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; }
+
+    .number-card {
+      padding: 0.85rem;
+      border: 1px solid var(--line);
+      border-radius: 0.8rem;
+      background: rgba(19, 27, 41, 0.76);
+    }
+    .number-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.5rem; }
+    .tag { padding: 0.25rem 0.45rem; border-radius: 999px; background: rgba(255, 203, 130, 0.12); color: var(--amber); font-size: 0.65rem; font-weight: 700; }
+    .number-text { color: var(--muted); font-size: 0.72rem; line-height: 1.5; }
+
+    .eval-table { width: 100%; margin-top: 1rem; border-collapse: collapse; }
+    .eval-table th, .eval-table td { padding: 0.7rem 0.6rem; border-bottom: 1px solid var(--line); font-size: 0.7rem; text-align: left; vertical-align: top; }
+    .eval-table th { color: var(--muted); font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; }
+    .eval-table td { color: #d4dfeb; }
+
+    .user-evaluation-list { display: grid; gap: 0.8rem; }
+    .user-evaluation-card { padding: 1rem; border: 1px solid var(--line); border-radius: 0.9rem; background: rgba(19, 27, 41, 0.78); }
+    .user-evaluation-card h3 { margin: 0; color: var(--ink); font-size: 0.82rem; line-height: 1.5; }
+    .user-evaluation-meta { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 0.45rem; color: var(--muted); font-size: 0.68rem; }
+    .user-evaluation-answer { margin-top: 0.7rem; color: #dce6f1; font-size: 0.76rem; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .user-evaluation-form { display: grid; gap: 0.75rem; margin-top: 0.9rem; padding-top: 0.85rem; border-top: 1px solid var(--line); }
+    .user-evaluation-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(10rem, 0.38fr); gap: 0.7rem; }
+    .user-evaluation-field { display: grid; gap: 0.35rem; color: var(--muted); font-size: 0.68rem; font-weight: 650; }
+    .user-evaluation-field textarea { min-height: 5rem; resize: vertical; line-height: 1.5; }
+    .user-evaluation-chunks { display: grid; gap: 0.45rem; margin-top: 0.55rem; }
+    .user-evaluation-chunk { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 0.55rem; padding: 0.65rem; border: 1px solid var(--line); border-radius: 0.65rem; background: #101927; color: var(--muted); font-size: 0.7rem; line-height: 1.45; }
+    .user-evaluation-chunk input, .user-evaluation-review input { accent-color: var(--mint); }
+    .user-evaluation-review { display: flex; align-items: center; gap: 0.5rem; color: #cbd9e8; font-size: 0.71rem; }
+    .user-evaluation-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.55rem; margin-top: 0.75rem; }
+    .user-evaluation-metric { padding: 0.65rem; border: 1px solid var(--line); border-radius: 0.65rem; background: #101927; }
+    .user-evaluation-metric span { display: block; color: var(--faint); font-size: 0.61rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    .user-evaluation-metric strong { display: block; margin-top: 0.3rem; color: var(--ink); font-size: 0.77rem; }
+
+    .visual-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; margin-top: 1rem; }
+    .visual-card { overflow: hidden; border: 1px solid var(--line); border-radius: 0.9rem; background: rgba(19, 27, 41, 0.86); }
+    .visual-card img { display: block; width: 100%; max-height: 22rem; object-fit: contain; background: #0a1019; }
+    .visual-card-body { padding: 0.85rem; }
+    .visual-card-title { display: flex; justify-content: space-between; gap: 0.6rem; color: var(--ink); font-size: 0.74rem; font-weight: 700; }
+    .visual-card-copy { margin-top: 0.45rem; color: var(--muted); font-size: 0.7rem; line-height: 1.45; }
+    .visual-card .button { margin-top: 0.7rem; }
+
+    .notice {
+      margin: 0.8rem 0;
+      padding: 0.72rem 0.85rem;
+      border: 1px solid var(--line);
+      border-radius: 0.7rem;
+      color: #dce6f1;
+      font-size: 0.75rem;
+      line-height: 1.45;
+    }
+    .notice.error { border-color: rgba(255, 154, 154, 0.36); background: rgba(255, 154, 154, 0.08); color: #ffc0c0; }
+    .notice.success { border-color: rgba(154, 240, 200, 0.35); background: rgba(154, 240, 200, 0.08); color: var(--mint); }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-top: 1.6rem;
+      padding: 0.8rem 0 0.2rem;
+      border-top: 1px solid var(--line);
+      color: var(--faint);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.64rem;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .muted { color: var(--muted); }
+    .spacer { height: 0.85rem; }
+
+    @media (max-width: 880px) {
+      .grid-four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-two { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    @media (max-width: 620px) {
+      .app-shell { padding: 0.8rem 0.75rem 1.3rem; }
+      .topbar { align-items: flex-start; }
+      .source-chip { max-width: 52vw; font-size: 0.65rem; }
+      .nav-button { min-height: 2.35rem; padding: 0 0.68rem; font-size: 0.7rem; }
+      .nav-index { display: none; }
+      .page-head { align-items: flex-start; }
+      .page-code { display: none; }
+      .grid-three, .result-grid, .visual-grid { grid-template-columns: minmax(0, 1fr); }
+      .user-evaluation-fields, .user-evaluation-metrics { grid-template-columns: minmax(0, 1fr); }
+      .ask-form { grid-template-columns: minmax(0, 1fr); }
+      .ask-form .button { width: 100%; }
+      .bar-row { grid-template-columns: minmax(5rem, 1fr) minmax(4rem, 1.2fr) 2.5rem; gap: 0.5rem; }
+      .footer { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    const root = document.getElementById("app");
+    let currentData = {};
+    let eventCounter = 0;
+    let componentInitialized = false;
+
+    function sendComponentMessage(type, fields = {}) {
+      window.parent.postMessage(
+        { isStreamlitMessage: true, type, ...fields },
+        "*",
+      );
+    }
+
+    function setFrameHeight() {
+      const height = Math.max(520, Math.ceil(root.getBoundingClientRect().height + 8));
+      sendComponentMessage("streamlit:setFrameHeight", { height });
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[character]);
+    }
+
+    function textBlock(value) {
+      return escapeHtml(value).replace(/\n/g, "<br>");
+    }
+
+    function button(action, label, options = {}) {
+      const classes = ["button", options.primary ? "primary" : "", options.small ? "small" : ""]
+        .filter(Boolean).join(" ");
+      const disabled = options.disabled ? "disabled" : "";
+      return `<button class="${classes}" data-action="${escapeHtml(action)}" ${disabled}>${label}</button>`;
+    }
+
+    function emit(action, fields = {}) {
+      eventCounter += 1;
+      sendComponentMessage("streamlit:setComponentValue", {
+        value: {
+          action,
+          page: currentData.page || "ask",
+          event_id: `${Date.now()}-${eventCounter}-${Math.random().toString(16).slice(2)}`,
+          ...fields,
+        },
+        dataType: "json",
+      });
+    }
+
+    function header(data) {
+      const documentName = data.document?.filename || "No PDF uploaded";
+      const isActive = Boolean(data.document);
+      const navItems = [
+        ["ask", "01", "Ask"],
+        ["activity", "02", "Activity"],
+        ["evaluation", "03", "Evaluation"],
+        ["document", "04", "Document"],
+        ["visuals", "05", "Visuals"],
+      ];
+      return `
+        <div class="app-shell">
+          <header class="topbar">
+            <div class="brand">
+              <div class="brand-mark">F</div>
+              <div><div class="brand-name">FOLIO / RAG</div><div class="brand-subtitle">Document intelligence workspace</div></div>
+            </div>
+            <div class="source-chip"><span class="source-dot" style="background:${isActive ? "var(--mint)" : "var(--faint)"}"></span><span>Source</span><strong title="${escapeHtml(documentName)}">${escapeHtml(documentName)}</strong></div>
+          </header>
+          <nav class="nav" aria-label="Workspace sections">
+            ${navItems.map(([page, number, label]) => `
+              <button class="nav-button ${data.page === page ? "active" : ""}" data-page="${page}">
+                <span class="nav-index">${number}</span>${label}
+              </button>`).join("")}
+          </nav>
+          <div id="notice"></div>
+          <main id="page-content"></main>
+          <footer class="footer"><span>Folio / Multimodal retrieval</span><span>Gemini · Session-isolated sources</span></footer>
+        </div>`;
+    }
+
+    function pageHeader(code, title, description, trailing = "") {
+      return `
+        <div class="page-head">
+          <div><div class="eyebrow">${code}</div><h1>${title}</h1><p class="page-description">${description}</p></div>
+          <div class="page-code">${trailing}</div>
+        </div>`;
+    }
+
+    function metric(label, value, foot = "") {
+      return `<div class="metric"><div class="metric-label">${label}</div><div class="metric-value">${escapeHtml(value)}</div><div class="metric-foot">${escapeHtml(foot)}</div></div>`;
+    }
+
+    function emptyState(title, message, mark = "↗") {
+      return `<div class="empty"><div><div class="empty-mark">${mark}</div><strong>${escapeHtml(title)}</strong><p>${escapeHtml(message)}</p></div></div>`;
+    }
+
+    function renderAsk(data) {
+      const chats = data.chat_history || [];
+      const documentReady = Boolean(data.document);
+      const latest = data.last_retrieval || {};
+      const turns = chats.slice(-12).reverse().map((chat) => {
+        const citations = (chat.citations || []).map((citation, index) => `
+          <div class="citation"><strong>Source ${index + 1} · page ${escapeHtml(citation.page)} · ${escapeHtml(citation.type)}</strong><br>${textBlock(citation.text)}</div>`).join("");
+        const confidence = !data.show_confidence || chat.confidence == null
+          ? ""
+          : `Confidence ${Number(chat.confidence).toFixed(0)}%`;
+        return `
+          <article class="turn">
+            <div class="turn-question">${textBlock(chat.question)}</div>
+            <div class="turn-answer">${textBlock(chat.answer)}</div>
+            <div class="turn-meta"><span>${escapeHtml(chat.chunks_used)} chunks</span><span>${escapeHtml(confidence)}</span><span>${escapeHtml((chat.timestamp || "").slice(11, 19))}</span></div>
+            ${citations ? `<div class="citations">${citations}</div>` : ""}
+          </article>`;
+      }).join("");
+
+      const prompts = [
+        "Summarize the main findings.",
+        "What are the key recommendations?",
+        "Which dates or deadlines are mentioned?",
+        "What are the main sections?",
+      ];
+      const debugContext = data.show_debug && data.retrieved_context?.length
+        ? `<details class="panel panel-pad" style="margin-top:1rem"><summary class="panel-title">Retrieved context (${data.retrieved_context.length} chunks)</summary><div class="citations">${data.retrieved_context.slice(0, 10).map((chunk, index) => `<div class="citation"><strong>Chunk ${index + 1}</strong><br>${textBlock(chunk.slice(0, 1200))}</div>`).join("")}</div></details>`
+        : "";
+      return `
+        ${pageHeader("01 / ASK YOUR SOURCE", "Answers start with evidence.", "Ask a question about the active PDF. Folio searches only the document uploaded in this session.", documentReady ? `${data.document.chunk_count || 0} INDEXED CHUNKS` : "WAITING FOR PDF")}
+        <section class="grid grid-four">
+          ${metric("Questions asked", chats.length, "This session")}
+          ${metric("Latest retrieval", latest.chunks ?? "—", "Chunks found")}
+          ${metric("Search time", latest.time == null ? "—" : `${Number(latest.time).toFixed(2)}s`, "Most recent query")}
+          ${metric("Source scope", documentReady ? "Private" : "Empty", "Session-isolated")}
+        </section>
+        <section class="panel panel-pad ask-panel" style="margin-top:1rem">
+          <h2 class="panel-title">Ask the document</h2>
+          <p class="panel-hint">${documentReady ? `Searching <strong>${escapeHtml(data.document.filename)}</strong>` : "Upload a PDF in the left configuration panel to start a conversation."}</p>
+          <form id="ask-form" class="ask-form">
+            <input id="question-input" class="control" autocomplete="off" placeholder="Ask about a claim, table, date, or recommendation..." ${documentReady ? "" : "disabled"}>
+            <button class="button primary" type="submit" ${documentReady ? "" : "disabled"}>Search source <span aria-hidden="true">↗</span></button>
+          </form>
+          <div class="quick-prompts">${prompts.map((prompt) => `<button class="prompt-chip" data-prompt="${escapeHtml(prompt)}" ${documentReady ? "" : "disabled"}>${escapeHtml(prompt)}</button>`).join("")}</div>
+        </section>
+        <div class="section-head"><h2>Conversation</h2>${button("clear_history", "Clear history", { small: true, disabled: chats.length === 0 })}</div>
+        ${turns ? `<div class="conversation">${turns}</div>` : emptyState("Your source is ready when you are.", "Ask a question to see the answer and its supporting passages here.", "✳")}
+        ${debugContext}`;
+    }
+
+    function renderActivity(data) {
+      const metrics = data.retrieval_metrics || [];
+      const values = metrics.slice(-10);
+      const max = Math.max(0.01, ...values.map((item) => Number(item.retrieval_time) || 0));
+      const bars = values.map((item) => {
+        const width = Math.max(4, ((Number(item.retrieval_time) || 0) / max) * 100);
+        return `<div class="bar-row"><div class="bar-label" title="${escapeHtml(item.question)}">${escapeHtml(item.question)}</div><div class="bar-track"><div class="bar-fill" style="width:${width}%"></div></div><div class="bar-value">${(Number(item.retrieval_time) || 0).toFixed(2)}s</div></div>`;
+      }).join("");
+      const average = values.length
+        ? values.reduce((total, item) => total + (Number(item.retrieval_time) || 0), 0) / values.length
+        : 0;
+      const averageChunks = values.length
+        ? values.reduce((total, item) => total + (Number(item.chunks_retrieved) || 0), 0) / values.length
+        : 0;
+      const chats = data.chat_history || [];
+      const confidences = chats.filter((chat) => chat.confidence != null).map((chat) => Number(chat.confidence));
+      const avgConfidence = confidences.length
+        ? `${(confidences.reduce((a, b) => a + b, 0) / confidences.length).toFixed(0)}%`
+        : "—";
+      return `
+        ${pageHeader("02 / SESSION PULSE", "A clear view of the work.", "Track search speed, retrieved context, and answer confidence for this document.")}
+        <section class="grid grid-four">
+          ${metric("Total questions", metrics.length, "Retrieval attempts")}
+          ${metric("Average search", values.length ? `${average.toFixed(2)}s` : "—", "Most recent 10 queries")}
+          ${metric("Average chunks", values.length ? averageChunks.toFixed(1) : "—", "Per retrieval")}
+          ${metric("Average confidence", avgConfidence, "Citation answers")}
+        </section>
+        <section class="panel panel-pad" style="margin-top:1rem">
+          <div class="section-head" style="margin-top:0"><h2>Retrieval timeline</h2><span>Latest ${values.length} searches</span></div>
+          ${bars ? `<div class="bar-list">${bars}</div>` : emptyState("No activity yet.", "Ask a question and retrieval timing will appear here.", "⌁")}
+        </section>
+        <section class="panel panel-pad" style="margin-top:1rem">
+          <div class="section-head" style="margin-top:0"><h2>Recent questions</h2><span>${chats.length} answers</span></div>
+          ${chats.length ? `<div class="conversation">${chats.slice(-8).reverse().map((chat) => `<article class="turn"><div class="turn-question">${textBlock(chat.question)}</div><div class="turn-meta"><span>${escapeHtml(chat.chunks_used)} chunks</span><span>${escapeHtml((chat.timestamp || "").slice(11, 19))}</span></div></article>`).join("")}</div>` : `<p class="panel-hint">Questions and answers from this session will be listed here.</p>`}
+        </section>`;
+    }
+
+    function renderEvaluation(data) {
+      const results = data.evaluation_results || [];
+      const scores = results.map((item) => Number(item.answer_similarity ?? 0));
+      const mean = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+      const exact = results.length
+        ? (results.filter((item) => item.exact_match === true).length / results.length) * 100
+        : 0;
+      const retrieval = results.length
+        ? results.reduce((total, item) => total + Number(item.retrieval_precision ?? item.retrieval_score ?? 0), 0) / results.length
+        : 0;
+      const rows = results.map((item) => `
+        <tr><td>${escapeHtml(item.question)}</td><td>${escapeHtml(item.modality || "—")}</td><td>${Number(item.retrieval_precision ?? item.retrieval_score ?? 0).toFixed(1)}%</td><td>${Number(item.answer_similarity ?? 0).toFixed(1)}%</td><td>${item.exact_match ? "Match" : "—"}</td></tr>`).join("");
+      const chart = results.map((item) => {
+        const value = Math.max(0, Math.min(100, Number(item.answer_similarity ?? item.retrieval_score ?? 0)));
+        return `<div class="bar-row"><div class="bar-label" title="${escapeHtml(item.question)}">${escapeHtml(item.question)}</div><div class="bar-track"><div class="bar-fill" style="width:${value}%"></div></div><div class="bar-value">${value.toFixed(0)}%</div></div>`;
+      }).join("");
+      const csvRows = [
+        Object.keys(results[0] || {}).join(","),
+        ...results.map((item) => Object.values(item).map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")),
+      ].join("\r\n");
+      const csvHref = `data:text/csv;charset=utf-8,${encodeURIComponent(csvRows)}`;
+      const userQueries = data.chat_history || [];
+      const userQueryCards = userQueries.map((chat, queryIndex) => {
+        const evaluation = chat.evaluation || {};
+        const answerMetrics = evaluation.answer_metrics;
+        const chunks = chat.retrieved_chunks || [];
+        const relevantIndices = evaluation.relevant_chunk_indices || [];
+        const chunkList = chunks.length
+          ? `<div class="user-evaluation-chunks">${chunks.map((chunk, chunkIndex) => {
+            const pageMatch = String(chunk).match(/^\s*\[Page\s*([^\]|]+)/i);
+            const page = pageMatch ? pageMatch[1].trim() : "Unknown";
+            return `<label class="user-evaluation-chunk"><input type="checkbox" data-relevant-query="${queryIndex}" data-relevant-chunk="${chunkIndex}" ${relevantIndices.includes(chunkIndex) ? "checked" : ""}><span><strong>Chunk ${chunkIndex + 1} · page ${escapeHtml(page)}</strong><br>${textBlock(String(chunk).slice(0, 900))}</span></label>`;
+          }).join("")}</div>`
+          : `<p class="panel-hint">No retrieved chunks were stored for this query.</p>`;
+        const metricValue = (value) => value == null ? "Pending reference" : `${Number(value).toFixed(1)}%`;
+        const answerMetricsHtml = answerMetrics
+          ? `
+            <div class="user-evaluation-metrics">
+              <div class="user-evaluation-metric"><span>Exact match</span><strong>${answerMetrics.exact_match ? "Yes" : "No"}</strong></div>
+              <div class="user-evaluation-metric"><span>Key number matching</span><strong>${(Number(answerMetrics.key_numbers_matched) * 100).toFixed(1)}%</strong></div>
+              <div class="user-evaluation-metric"><span>Jaccard similarity</span><strong>${(Number(answerMetrics.jaccard_similarity) * 100).toFixed(1)}%</strong></div>
+              <div class="user-evaluation-metric"><span>Combined answer score</span><strong>${Number(answerMetrics.combined_score).toFixed(1)}%</strong></div>
+            </div>`
+          : `<div class="notice">${chat.answer_generated === false ? "Answer scoring is unavailable because no answer was generated." : "Answer evaluation pending. Add a reference answer to calculate answer scores."}</div>`;
+        return `
+          <article class="user-evaluation-card">
+            <h3>${textBlock(chat.question)}</h3>
+            <div class="user-evaluation-meta">
+              <span>${escapeHtml(chat.timestamp || "")}</span>
+              <span>${chunks.length} retrieved chunks</span>
+              <span>Source pages: ${escapeHtml((chat.source_pages || []).join(", ") || "Not available")}</span>
+            </div>
+            <div class="user-evaluation-answer">${textBlock(chat.answer || "No answer was generated.")}</div>
+            <div class="user-evaluation-metrics">
+              <div class="user-evaluation-metric"><span>Relevant-chunk precision</span><strong>${metricValue(evaluation.retrieval_precision)}</strong></div>
+              <div class="user-evaluation-metric"><span>Expected-page precision</span><strong>${metricValue(evaluation.page_precision)}</strong></div>
+              <div class="user-evaluation-metric"><span>Answer evaluation</span><strong>${chat.answer_generated === false ? "Unavailable" : answerMetrics ? "Complete" : "Pending"}</strong></div>
+            </div>
+            ${answerMetricsHtml}
+            <form class="user-evaluation-form" data-user-evaluation-form="${queryIndex}">
+              <div class="user-evaluation-fields">
+                <label class="user-evaluation-field">Reference / expected answer
+                  <textarea id="reference-answer-${queryIndex}" class="control" placeholder="Enter a trusted answer to score this response...">${escapeHtml(evaluation.reference_answer || "")}</textarea>
+                </label>
+                <label class="user-evaluation-field">Expected page numbers (optional)
+                  <input id="expected-pages-${queryIndex}" class="control" value="${escapeHtml((evaluation.expected_pages || []).join(", "))}" placeholder="e.g. 2, 4">
+                </label>
+              </div>
+              ${chunks.length ? `
+                <div>
+                  <label class="user-evaluation-review"><input id="relevance-reviewed-${queryIndex}" type="checkbox" ${evaluation.relevance_reviewed ? "checked" : ""}> I reviewed the retrieved chunks for relevance</label>
+                  <p class="panel-hint">Select each chunk that supports the answer. Confirming review calculates precision, including a zero score if none are relevant.</p>
+                  ${chunkList}
+                </div>` : ""}
+              <button type="button" class="button small" data-action="evaluate_user_query" data-query-index="${queryIndex}">Save &amp; evaluate query</button>
+            </form>
+          </article>`;
+      }).reverse().join("");
+      return `
+        ${pageHeader("03 / QUALITY CHECK", "Measure what the answers get right.", "Run the existing benchmark for the active PDF, or load the sample dashboard.")}
+        <section class="panel panel-pad" style="margin-bottom:1rem">
+          <div class="section-head" style="margin-top:0"><div><h2>User Query Evaluation</h2><p class="panel-hint">Review questions from this session. Mark relevant retrieved chunks, add expected pages when known, and provide a reference answer for answer scoring.</p></div><span>${userQueries.length} user queries</span></div>
+          ${userQueryCards ? `<div class="user-evaluation-list">${userQueryCards}</div>` : emptyState("No user queries yet.", "Questions asked in the Ask page will appear here automatically.", "◎")}
+        </section>
+        <section class="panel panel-pad">
+          <div class="section-head" style="margin-top:0"><div><h2>Evaluation run</h2><p class="panel-hint">Scores are calculated for the questions in the current evaluation set.</p></div><div class="grid" style="grid-template-columns:repeat(2,auto)">${button("run_evaluation", "Run evaluation", { primary: true, disabled: !data.document })}${button("load_sample_results", "Load sample")}</div></div>
+        </section>
+        ${results.length ? `
+          <section class="grid grid-three" style="margin-top:1rem">
+            ${metric("Answer similarity", `${mean.toFixed(1)}%`, "Average score")}
+            ${metric("Retrieval score", `${retrieval.toFixed(1)}%`, "Average precision")}
+            ${metric("Exact match", `${exact.toFixed(1)}%`, `${results.length} test cases`)}
+          </section>
+          <section class="panel panel-pad" style="margin-top:1rem">
+            <div class="section-head" style="margin-top:0"><h2>Scores by question</h2><span>Answer similarity</span></div>
+            <div class="bar-list">${chart}</div>
+          </section>
+          <section class="panel panel-pad" style="margin-top:1rem;overflow-x:auto">
+            <h2 class="panel-title">Detailed results</h2>
+            <a class="button small" href="${csvHref}" download="evaluation_results.csv">Download CSV</a>
+            <table class="eval-table"><thead><tr><th>Question</th><th>Type</th><th>Retrieval</th><th>Answer</th><th>Exact</th></tr></thead><tbody>${rows}</tbody></table>
+          </section>` : `<div class="spacer"></div>${emptyState("No evaluation results yet.", "Run an evaluation to see retrieval and answer quality for this source.", "◎")}`}`;
+    }
+
+    function outputCard(title, value) {
+      if (!value) return "";
+      return `<section class="output-card"><h3>${escapeHtml(title)}</h3><div class="output-text">${textBlock(value.text || value)}</div></section>`;
+    }
+
+    function renderDocument(data) {
+      const outputs = data.outputs || {};
+      const summary = outputs.full_summary;
+      const sources = summary?.sources || [];
+      const numberRows = (outputs.numbers || []).map((row) => {
+        const tags = [...(row.percentages || []), ...(row.numbers || []).slice(0, 3)];
+        return `<article class="number-card"><div class="number-tags">${tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</div><div class="number-text">${textBlock(row.text)}</div></article>`;
+      }).join("");
+      const headers = outputs.structure || [];
+      const sourceCards = sources.map((source, index) => `<div class="citation"><strong>Source ${index + 1}</strong><br>${textBlock(source)}</div>`).join("");
+      return `
+        ${pageHeader("04 / DOCUMENT EXPLORER", "The useful details, brought forward.", "Create a structured summary, pull out key numbers, or inspect the document outline.")}
+        <section class="grid grid-two">
+          <div class="panel panel-pad">
+            <h2 class="panel-title">Generate a document summary</h2>
+            <p class="panel-hint">Combine relevant passages into a concise, structured overview.</p>
+            <div class="spacer"></div>
+            ${button("full_summary", "Build full summary", { primary: true, disabled: !data.document })}
+            ${outputCard("Full summary", summary)}
+            ${sourceCards ? `<div class="citations">${sourceCards}</div>` : ""}
+          </div>
+          <div class="panel panel-pad">
+            <h2 class="panel-title">Quick reads</h2>
+            <p class="panel-hint">Generate a focused response from the indexed text.</p>
+            <div class="result-grid" style="margin-top:0.9rem">
+              <button class="action-card" data-action="quick_overview"><strong>Document overview</strong><span>Purpose and central topics</span><i>↗</i></button>
+              <button class="action-card" data-action="evaluation_summary"><strong>Criteria & weights</strong><span>Evaluation details and scores</span><i>↗</i></button>
+              <button class="action-card" data-action="features_summary"><strong>Key features</strong><span>Capabilities and requirements</span><i>↗</i></button>
+              <button class="action-card" data-action="deliverables_summary"><strong>Deliverables</strong><span>Outputs and handoff items</span><i>↗</i></button>
+            </div>
+          </div>
+        </section>
+        <section class="grid grid-two" style="margin-top:1rem">
+          <div class="panel panel-pad">
+            <div class="section-head" style="margin-top:0"><div><h2>Numbers & statistics</h2><p class="panel-hint">Find percentages, quantities, dates, and other numeric references.</p></div>${button("extract_numbers", "Extract", { small: true, disabled: !data.document })}</div>
+            ${numberRows ? `<div class="grid grid-two" style="margin-top:0.9rem">${numberRows}</div>` : `<p class="panel-hint">Extracted references will appear here.</p>`}
+          </div>
+          <div class="panel panel-pad">
+            <div class="section-head" style="margin-top:0"><div><h2>Document outline</h2><p class="panel-hint">Detect likely headings and section labels.</p></div>${button("analyze_structure", "Analyze", { small: true, disabled: !data.document })}</div>
+            ${headers.length ? `<div class="citations">${headers.map((header) => `<div class="citation">${textBlock(header)}</div>`).join("")}</div>` : `<p class="panel-hint">Detected headings will appear here.</p>`}
+          </div>
+        </section>
+        ${outputCard(outputs.quick_overview?.title || "Document overview", outputs.quick_overview)}
+        ${outputCard(outputs.evaluation_summary?.title || "Criteria & weights", outputs.evaluation_summary)}
+        ${outputCard(outputs.features_summary?.title || "Key features", outputs.features_summary)}
+        ${outputCard(outputs.deliverables_summary?.title || "Deliverables", outputs.deliverables_summary)}`;
+    }
+
+    function renderVisuals(data) {
+      const results = data.visual_results || [];
+      const cards = results.map((item, index) => `
+        <article class="visual-card">
+          ${item.image_data ? `<img src="${item.image_data}" alt="PDF page ${escapeHtml(item.page)} image ${index + 1}">` : `<div class="empty"><p>${escapeHtml(item.image_error || "Image preview unavailable.")}</p></div>`}
+          <div class="visual-card-body">
+            <div class="visual-card-title"><span>Page ${escapeHtml(item.page ?? "?")} · image ${index + 1}</span><span>${Number(item.score || 0).toFixed(3)}</span></div>
+            <div class="visual-card-copy">${textBlock(item.ocr_text || "No OCR text detected.")}</div>
+            <input id="image-question-${index}" class="control" placeholder="What should Gemini explain?" ${item.image_data ? "" : "disabled"}>
+            <button class="button small" data-action="analyze_image" data-index="${index}" ${item.image_data ? "" : "disabled"}>Ask Gemini about this image ↗</button>
+          </div>
+        </article>`).join("");
+      return `
+        ${pageHeader("05 / VISUAL EVIDENCE", "Search what the page shows.", "Find embedded images with CLIP, read extracted OCR, and ask Gemini for a visual interpretation.", data.visual_ready ? `${data.visual_count} INDEXED IMAGES` : "CLIP INDEX UNAVAILABLE")}
+        <section class="panel panel-pad">
+          <h2 class="panel-title">Search visual content</h2>
+          <p class="panel-hint">Describe a chart, figure, diagram, or other image in the active PDF.</p>
+          <form id="visual-form" class="ask-form">
+            <input id="visual-query" class="control" placeholder="e.g. Find the chart comparing annual revenue..." ${data.visual_ready ? "" : "disabled"}>
+            <select id="visual-top-k" class="control" style="max-width:8rem" ${data.visual_ready ? "" : "disabled"}><option>3</option><option>5</option><option>10</option></select>
+            <button class="button primary" type="submit" ${data.visual_ready ? "" : "disabled"}>Search images ↗</button>
+          </form>
+          ${!data.visual_ready ? `<div class="notice">Upload a PDF and enable CLIP image embeddings to use visual search. Image OCR can still be searched from the Ask page.</div>` : ""}
+        </section>
+        ${data.visual_analysis ? `<section class="output-card"><h3>Gemini image analysis</h3><div class="output-text">${textBlock(data.visual_analysis)}</div></section>` : ""}
+        ${cards ? `<div class="visual-grid">${cards}</div>` : emptyState("No visual matches to show.", data.visual_query ? `Last search: ${data.visual_query}` : "Search for a visual element to see matching images and OCR.", "▧")}
+        ${data.visual_ready ? `<section class="panel panel-pad" style="margin-top:1rem"><h2 class="panel-title">Indexed image inventory</h2><p class="panel-hint">${data.visual_count} image records are available for this PDF.</p>${data.visual_inventory?.length ? `<div class="citations">${data.visual_inventory.map((image) => `<div class="citation"><strong>${escapeHtml(image.image_id)} · page ${escapeHtml(image.page)} · image ${escapeHtml(image.image_index)}</strong><br>${textBlock((image.ocr_text || "").slice(0, 180) || "No OCR text detected.")}</div>`).join("")}</div>` : ""}</section>` : ""}`;
+    }
+
+    function showNotice(notice) {
+      const container = document.getElementById("notice");
+      if (!container) return;
+      container.innerHTML = notice
+        ? `<div class="notice ${notice.kind === "error" ? "error" : notice.kind === "success" ? "success" : ""}">${escapeHtml(notice.message)}</div>`
+        : "";
+    }
+
+    function wireEvents(data) {
+      root.querySelectorAll("[data-page]").forEach((element) => {
+        element.addEventListener("click", () => emit("navigate", { page: element.dataset.page }));
+      });
+      root.querySelectorAll("[data-action]").forEach((element) => {
+        element.addEventListener("click", () => {
+          const action = element.dataset.action;
+          if (action === "evaluate_user_query") {
+            const queryIndex = Number(element.dataset.queryIndex);
+            const form = root.querySelector(
+              `[data-user-evaluation-form="${queryIndex}"]`,
+            );
+            const referenceAnswer = document.getElementById(
+              `reference-answer-${queryIndex}`,
+            )?.value || "";
+            const expectedPages = document.getElementById(
+              `expected-pages-${queryIndex}`,
+            )?.value || "";
+            const relevanceReviewed = document.getElementById(
+              `relevance-reviewed-${queryIndex}`,
+            )?.checked || false;
+            const relevantChunkIndices = Array.from(
+              form?.querySelectorAll(`[data-relevant-query="${queryIndex}"]:checked`) || [],
+            ).map((checkbox) => Number(checkbox.dataset.relevantChunk));
+            emit(action, {
+              query_index: queryIndex,
+              reference_answer: referenceAnswer,
+              expected_pages: expectedPages,
+              relevance_reviewed: relevanceReviewed,
+              relevant_chunk_indices: relevantChunkIndices,
+            });
+            return;
+          }
+          if (action === "analyze_image") {
+            const index = Number(element.dataset.index);
+            const question = document.getElementById(`image-question-${index}`)?.value.trim();
+            if (question) emit(action, { index, question });
+            else showNotice({ kind: "error", message: "Enter a question about the selected image." });
+            return;
+          }
+          emit(action);
+        });
+      });
+      root.querySelectorAll("[data-prompt]").forEach((element) => {
+        element.addEventListener("click", () => {
+          const question = element.dataset.prompt;
+          const input = document.getElementById("question-input");
+          if (input) input.value = question;
+          emit("ask", { question });
+        });
+      });
+
+      const askForm = document.getElementById("ask-form");
+      if (askForm) {
+        askForm.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const input = document.getElementById("question-input");
+          const question = input?.value.trim();
+          if (question) emit("ask", { question });
+        });
+      }
+
+      const visualForm = document.getElementById("visual-form");
+      if (visualForm) {
+        visualForm.addEventListener("submit", (event) => {
+          event.preventDefault();
+          emit("visual_search", {
+            query: document.getElementById("visual-query")?.value.trim() || "",
+            top_k: Number(document.getElementById("visual-top-k")?.value || 3),
+          });
+        });
+      }
+    }
+
+    function render(args) {
+      currentData = args?.data || {};
+      root.innerHTML = header(currentData);
+      const pageContent = document.getElementById("page-content");
+      const renderers = {
+        ask: renderAsk,
+        activity: renderActivity,
+        evaluation: renderEvaluation,
+        document: renderDocument,
+        visuals: renderVisuals,
+      };
+      pageContent.innerHTML = (renderers[currentData.page] || renderAsk)(currentData);
+      showNotice(currentData.notice);
+      wireEvents(currentData);
+      requestAnimationFrame(setFrameHeight);
+    }
+
+    window.addEventListener("message", (event) => {
+      if (event.source !== window.parent || !event.data) return;
+      if (event.data.type === "streamlit:render") {
+        componentInitialized = true;
+        render(event.data.args);
+      }
+    });
+
+    if ("ResizeObserver" in window) {
+      new ResizeObserver(setFrameHeight).observe(root);
+    }
+
+    window.addEventListener("load", () => {
+      const announceReady = () => {
+        if (componentInitialized) return;
+        sendComponentMessage("streamlit:componentReady", { apiVersion: 1 });
+        window.setTimeout(announceReady, 300);
+      };
+      announceReady();
+    }, { once: true });
+  </script>
+</body>
+</html>

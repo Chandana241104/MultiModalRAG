@@ -8,6 +8,47 @@ import plotly.express as px
 from datetime import datetime
 import os
 
+
+def evaluate_answer_similarity(predicted: str, expected: str) -> Dict:
+    """Compare an answer to a reference answer using the benchmark's scoring rules."""
+    if not predicted or not expected:
+        return {
+            "exact_match": False,
+            "key_numbers_matched": 0,
+            "jaccard_similarity": 0,
+            "combined_score": 0,
+        }
+
+    predicted_lower = predicted.lower()
+    expected_lower = expected.lower()
+    exact_match = expected_lower in predicted_lower
+
+    key_numbers = [
+        word for word in expected.split() if "%" in word or word.isdigit()
+    ]
+    number_matches = sum(1 for number in key_numbers if number in predicted)
+
+    expected_words = set(expected_lower.split())
+    predicted_words = set(predicted_lower.split())
+    intersection = expected_words.intersection(predicted_words)
+    union = expected_words.union(predicted_words)
+    jaccard_similarity = len(intersection) / len(union) if union else 0
+
+    key_numbers_score = number_matches / len(key_numbers) if key_numbers else 0
+    combined_score = (
+        exact_match * 0.4
+        + key_numbers_score * 0.3
+        + jaccard_similarity * 0.3
+    ) * 100
+
+    return {
+        "exact_match": exact_match,
+        "key_numbers_matched": key_numbers_score,
+        "jaccard_similarity": jaccard_similarity,
+        "combined_score": combined_score,
+    }
+
+
 class MultiModalEvaluator:
     def __init__(self, test_queries_path: str = "data/evaluation/queries.json"):
         """Initialize evaluator with test queries"""
@@ -111,48 +152,7 @@ class MultiModalEvaluator:
     
     def evaluate_answer_similarity(self, predicted: str, expected: str) -> Dict:
         """Evaluate answer quality using text similarity"""
-        if not predicted or not expected:
-            return {
-                "exact_match": False,
-                "key_numbers_matched": 0,
-                "jaccard_similarity": 0,
-                "combined_score": 0
-            }
-        
-        predicted_lower = predicted.lower()
-        expected_lower = expected.lower()
-        
-        # Check for exact match of key terms
-        exact_match = expected_lower in predicted_lower
-        
-        # Check for partial matches (key numbers like percentages)
-        key_numbers = [word for word in expected.split() if '%' in word or word.isdigit()]
-        number_matches = 0
-        for num in key_numbers:
-            if num in predicted:
-                number_matches += 1
-        
-        # Calculate Jaccard similarity
-        expected_words = set(expected_lower.split())
-        predicted_words = set(predicted_lower.split())
-        
-        if expected_words and predicted_words:
-            intersection = expected_words.intersection(predicted_words)
-            union = expected_words.union(predicted_words)
-            jaccard_similarity = len(intersection) / len(union) if union else 0
-        else:
-            jaccard_similarity = 0
-        
-        # Calculate combined score
-        key_numbers_score = number_matches / len(key_numbers) if key_numbers else 0
-        combined_score = (exact_match * 0.4 + key_numbers_score * 0.3 + jaccard_similarity * 0.3) * 100
-        
-        return {
-            "exact_match": exact_match,
-            "key_numbers_matched": key_numbers_score,
-            "jaccard_similarity": jaccard_similarity,
-            "combined_score": combined_score
-        }
+        return evaluate_answer_similarity(predicted, expected)
     
     def run_single_evaluation(self, question: Dict, retriever_func, answer_func) -> Dict:
         """Run evaluation for a single question"""

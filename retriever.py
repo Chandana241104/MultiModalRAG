@@ -7,8 +7,22 @@ from typing import List, Dict
 import numpy as np
 
 class EnhancedRetriever:
-    def __init__(self):
+    def __init__(self, session_id=None, document_id=None):
         self.cache = {}
+        self.session_id = session_id
+        self.document_id = document_id
+
+    def set_document_scope(self, document_id):
+        self.document_id = document_id
+
+    def _metadata_filter(self):
+        if not self.session_id:
+            return None
+
+        metadata_filter = {"session_id": {"$eq": self.session_id}}
+        if self.document_id:
+            metadata_filter["document_id"] = {"$eq": self.document_id}
+        return metadata_filter
         
     def clean_text(self, text: str) -> str:
         """
@@ -190,7 +204,11 @@ class EnhancedRetriever:
                     query_embedding = query_embedding[0]
             
             try:
-                matches = query_vector(query_embedding, top_k=min(top_k * 2, 50))
+                matches = query_vector(
+                    query_embedding,
+                    top_k=min(top_k * 2, 50),
+                    metadata_filter=self._metadata_filter(),
+                )
                 all_matches.extend(matches)
             except Exception as e:
                 print(f"Error querying vector store for '{exp_query}': {e}")
